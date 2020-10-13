@@ -1,15 +1,18 @@
 import HttpProvider from 'ethjs-provider-http';
 import Eth from 'ethjs-query';
 import EthContract from 'ethjs-contract';
-import TLSDIDContract from '../contracts/tls-did-contract.json';
-import TLSDIDRegsitryContract from '../contracts/tls-did-registry-contract.json';
+import TLSDIDJson from 'tls-did-registry/build/contracts/TLSDID.json';
+import TLSDIDRegistryJson from 'tls-did-registry/build/contracts/TLSDIDRegistry.json';
 import filterAsync from 'node-filter-async';
 import SSLCertificate from 'get-ssl-certificate';
 
+//TODO import from tls-did-registry or tls-did-resolver
+const REGISTRY = '0xc0b0F8f67C9605F99c9E774bBA66A0D9592aA0f5';
+
 class Resolver {
   constructor(rpcUrl, registryAddress) {
-    this.eth = this.configureNetwork(rpcUrl);
-    this.registry = this.configureRegistry(registryAddress);
+    this.configureNetwork(rpcUrl);
+    this.configureRegistry(REGISTRY || registryAddress);
   }
 
   configureProvider(rpcUrl) {
@@ -20,22 +23,22 @@ class Resolver {
   configureNetwork(rpcUrl) {
     const provider = this.configureProvider(rpcUrl);
     const eth = new Eth(provider);
-    return eth;
+    this.eth = eth;
   }
 
   configureRegistry(registryAddress) {
     const didRegistryContract = new EthContract(this.eth)(
-      TLSDIDRegsitryContract
+      TLSDIDRegistryJson.abi
     );
     const didRegistry = didRegistryContract.at(registryAddress);
-    return didRegistry;
+    this.registry = didRegistry;
   }
 
   async resolveDIDSC(did) {
-    const addresses = (await this.registry.getTSLDIDContracts(did))['0'];
+    const addresses = (await this.registry.getContracts(did))['0'];
 
     const constracts = addresses.map((address) => {
-      const tlsDidContract = new EthContract(this.eth)(TLSDIDContract);
+      const tlsDidContract = new EthContract(this.eth)(TLSDIDJson.abi);
       return tlsDidContract.at(address);
     });
 

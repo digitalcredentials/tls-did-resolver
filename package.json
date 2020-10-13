@@ -29,6 +29,9 @@
     "ethjs-provider-http": "^0.1.6",
     "ethjs-query": "^0.3.8",
     "get-ssl-certificate": "^2.3.3",
-    "node-filter-async": "^2.0.0"
+    "install": "^0.13.0",
+    "node-filter-async": "^2.0.0",
+    "npm": "^6.14.8",
+    "tls-did-registry": "github:tls-did-project/tls-did-registry#master"
   }
 }
