@@ -7,7 +7,7 @@ import TLSDIDJson from 'tls-did-registry/build/contracts/TLSDID.json';
 import TLSDIDRegistryJson from 'tls-did-registry/build/contracts/TLSDIDRegistry.json';
 
 //TODO import from tls-did-registry or tls-did-resolver
-const REGISTRY = '0xF7fBa67a3f6b05A9E0DA8DcB1f44aE037134eAE4';
+const REGISTRY = '0xe28131a74c9Fb412f0e57AD4614dB1A8D6a01793';
 
 function verify(pemCert, signature, data) {
   const signatureBuffer = new Buffer.from(signature, 'base64');
@@ -16,6 +16,24 @@ function verify(pemCert, signature, data) {
   verifier.end();
   const valid = verifier.verify(pemCert, signatureBuffer);
   return valid;
+}
+
+function hashContract(domain, address, attributes, expiry) {
+  //TODO test use byte array?
+  let attributeString = '';
+  if (typeof attributes !== 'undefined') {
+    attributes.forEach(
+      (attribute) => (attributeString += attribute.path + attribute.value)
+    );
+  }
+  if (typeof expiry === 'undefined') {
+    expiry = '';
+  }
+  const stringified = domain + address + attributeString + expiry;
+  const hasher = crypto.createHash('sha256');
+  hasher.update(stringified);
+  const hash = hasher.digest('base64');
+  return hash;
 }
 class Resolver {
   constructor(provider, registryAddress) {
@@ -87,7 +105,18 @@ class Resolver {
     //Create hash of contract values
     //TODO check to string methods
     const address = await contract.address;
-    let attributes = await contract.getAttributes();
+
+    const attributeCount = await contract.getAttributeCount();
+    let attributes = [];
+    for (let i = 0; i < attributeCount; i++) {
+      const attribute = await contract.getAttribute(i);
+      const path = attribute['0'];
+      const value = attribute['1'];
+      attributes.push({ path, value });
+    }
+
+    console.log(attributes);
+
     let expiry = await contract.expiry();
     if (!attributes) {
       attributes = '';
@@ -95,11 +124,7 @@ class Resolver {
     if (expiry.isZero()) {
       expiry = '';
     }
-    const stringified = didDomain + address + attributes + expiry;
-
-    const hasher = crypto.createHash('sha256');
-    hasher.update(stringified);
-    const hash = hasher.digest('base64');
+    const hash = hashContract(didDomain, address, attributes, expiry);
 
     // const pem = await this.getCertFromServer(did);
 
