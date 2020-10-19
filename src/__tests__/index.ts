@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import { readFileSync } from 'fs';
 import { ethers } from 'ethers';
-import { Resolver, getResolver, hashContract } from '../tls-did-resolver';
+import { Resolver, getResolver, hashContract } from '../index';
 
 const jsonRpcUrl = 'http://127.0.0.1:8545';
 
