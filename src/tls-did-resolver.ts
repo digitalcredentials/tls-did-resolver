@@ -9,8 +9,13 @@ import TLSDIDRegistryJson from 'tls-did-registry/build/contracts/TLSDIDRegistry.
 //TODO import from tls-did-registry or tls-did-resolver
 const REGISTRY = '0xe28131a74c9Fb412f0e57AD4614dB1A8D6a01793';
 
-function verify(pemCert, signature, data) {
-  const signatureBuffer = new Buffer.from(signature, 'base64');
+interface attribute {
+  path: string
+  value: string
+}
+
+function verify(pemCert: string, signature: string, data: string) {
+  const signatureBuffer = Buffer.from(signature, 'base64');
   const verifier = crypto.createVerify('sha256');
   verifier.update(data);
   verifier.end();
@@ -18,39 +23,46 @@ function verify(pemCert, signature, data) {
   return valid;
 }
 
-function hashContract(domain, address, attributes, expiry) {
+export function hashContract(domain: string, address: string, attributes?: attribute[], expiry?: number) {
   //TODO test use byte array?
   let attributeString = '';
-  if (typeof attributes !== 'undefined') {
+  if (attributes) {
     attributes.forEach(
       (attribute) => (attributeString += attribute.path + attribute.value)
     );
   }
-  if (typeof expiry === 'undefined') {
-    expiry = '';
+
+  let expiryString = '';
+  if (expiry) {
+    expiryString = expiry.toString();
   }
+
   const stringified = domain + address + attributeString + expiry;
   const hasher = crypto.createHash('sha256');
   hasher.update(stringified);
   const hash = hasher.digest('base64');
   return hash;
 }
-class Resolver {
+
+export class Resolver {
+  private provider: ethers.providers.JsonRpcProvider;
+  private registry: ethers.Contract;
+
   constructor(provider, registryAddress) {
     this.provider = provider;
     this.configureRegistry(REGISTRY || registryAddress);
   }
 
-  configureRegistry(registryAddress) {
+  private configureRegistry(registryAddress: string) {
     const registry = new ethers.Contract(
-      REGISTRY,
+      registryAddress,
       TLSDIDRegistryJson.abi,
       this.provider
     );
     this.registry = registry;
   }
 
-  async resolveDIDSC(did) {
+  private async resolveContract(did: string) {
     const addresses = await this.registry.getContracts(did);
 
     const contracts = addresses.map((address) => {
@@ -76,22 +88,20 @@ class Resolver {
     }
   }
 
-  async getCertFromServer(did) {
+  private async getCertFromServer(did: string) {
     const domain = did.substring(8);
     const certificate = await SSLCertificate.get(domain);
     return certificate.pemEncoded;
   }
 
-  debugCert() {
+  private debugCert() {
     const pemPath = '/__tests__/ssl/certs/testserver.pem';
     const cert = readFileSync(__dirname + pemPath, 'utf8');
     return cert;
   }
 
-  async checkContractSignature(did, contract) {
+  private async checkContractSignature(did, contract) {
     const signature = await contract.signature();
-
-    console.log('signature', signature);
 
     //Check for equal domain in DID and Contract
     //TODO implement if values are empty/undefined => ""
@@ -115,11 +125,9 @@ class Resolver {
       attributes.push({ path, value });
     }
 
-    console.log(attributes);
-
     let expiry = await contract.expiry();
     if (!attributes) {
-      attributes = '';
+      attributes = [];
     }
     if (expiry.isZero()) {
       expiry = '';
@@ -132,16 +140,20 @@ class Resolver {
     const cert = this.debugCert();
     const valid = verify(cert, signature, hash);
 
-    console.log('valid', valid);
-
     return valid;
   }
 
-  resolveDID(did) {
-    const didContract = this.resolveDIDSC(did);
+  async resolve(did) {
+    const didContract = await this.resolveContract(did);
 
     const publicKey = {};
   }
 }
 
-export default Resolver;
+export function getResolver(provider, registry) {
+  const resolver = new Resolver(provider, registry);
+  async function resolve(did) {
+    return await resolver.resolve(did);
+  }
+  return { tls: resolve };
+}
