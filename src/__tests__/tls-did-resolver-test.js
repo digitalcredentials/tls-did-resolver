@@ -41,7 +41,7 @@ function hashContract(domain, address, attributes, expiry) {
   const stringified = domain + address + attributes + expiry;
   const hasher = crypto.createHash('sha256');
   hasher.update(stringified);
-  const hash = hasher.digest('hex');
+  const hash = hasher.digest('base64');
   return hash;
 }
 

@@ -7,7 +7,7 @@ import TLSDIDJson from 'tls-did-registry/build/contracts/TLSDID.json';
 import TLSDIDRegistryJson from 'tls-did-registry/build/contracts/TLSDIDRegistry.json';
 
 //TODO import from tls-did-registry or tls-did-resolver
-const REGISTRY = '0x651a4efe8221447261ed8a6fe8a75D971C94f79c';
+const REGISTRY = '0xF7fBa67a3f6b05A9E0DA8DcB1f44aE037134eAE4';
 
 function verify(pemCert, signature, data) {
   const signatureBuffer = new Buffer.from(signature, 'base64');
@@ -85,19 +85,22 @@ class Resolver {
     }
 
     //Create hash of contract values
+    //TODO check to string methods
     const address = await contract.address;
-    const attributes = await contract.getAttributes();
-    const expiry = await contract.expiry();
-
+    let attributes = await contract.getAttributes();
+    let expiry = await contract.expiry();
+    if (!attributes) {
+      attributes = '';
+    }
+    if (expiry.isZero()) {
+      expiry = '';
+    }
     const stringified = didDomain + address + attributes + expiry;
-
-    console.log('stringified', stringified);
 
     const hasher = crypto.createHash('sha256');
     hasher.update(stringified);
-    const hash = hasher.digest('hex');
+    const hash = hasher.digest('base64');
 
-    console.log('hash', hash);
     // const pem = await this.getCertFromServer(did);
 
     //Check for correct signature
