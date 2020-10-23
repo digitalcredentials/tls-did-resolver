@@ -1,5 +1,7 @@
 import crypto from 'crypto';
 import { JWK } from 'jose';
+import { readFileSync } from 'fs';
+import SSLCertificate from 'get-ssl-certificate';
 
 interface attribute {
   path: string
@@ -54,3 +56,15 @@ export function addValueAtPath(object: object, path: string, value: any) {
     }
   })
 }
+
+  export async function getCertFromServer(did: string): Promise<string> {
+    const domain = did.substring(8);
+    const cert = await SSLCertificate.get(domain);
+    return cert.pemEncoded;
+  }
+
+  export function debugCert(): string {
+    const pemPath = '/__tests__/ssl/certs/testserver.pem';
+    const cert = readFileSync(__dirname + pemPath, 'utf8');
+    return cert;
+  }
