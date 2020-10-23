@@ -1,6 +1,6 @@
 {
   "name": "tls-did-resolver",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "",
   "main": "lib/index.js",
   "scripts": {
@@ -26,7 +26,7 @@
   "dependencies": {
     "ethers": "^5.0.17",
     "get-ssl-certificate": "^2.3.3",
-    "node-filter-async": "^2.0.0",
+    "jose": "^2.0.2",
     "tls-did-registry": "github:tls-did-project/tls-did-registry#master"
   }
 }
