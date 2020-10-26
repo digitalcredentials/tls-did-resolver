@@ -2,14 +2,7 @@ import { Contract, providers } from 'ethers';
 import { JWK } from 'jose';
 import TLSDIDJson from 'tls-did-registry/build/contracts/TLSDID.json';
 import TLSDIDRegistryJson from 'tls-did-registry/build/contracts/TLSDIDRegistry.json';
-import {
-  hashContract,
-  verify,
-  x509ToJwk,
-  addValueAtPath,
-  getCertFromServer,
-  debugCert,
-} from './utils';
+import { hashContract, verify, x509ToJwk, addValueAtPath, getCertFromServer, debugCert } from './utils';
 
 export const REGISTRY = '0xefd425B44ed72fD3F7829007214Ba4907BFAF4D5';
 
@@ -18,25 +11,19 @@ async function resolveContract(
   registryAddress: string,
   did: string
 ): Promise<{ contract: Contract; jwk: JWK.RSAKey }> {
-  const registry = new Contract(
-    registryAddress,
-    TLSDIDRegistryJson.abi,
-    provider
-  );
+  const registry = new Contract(registryAddress, TLSDIDRegistryJson.abi, provider);
   const addresses = await registry.getContracts(did);
 
   let validContract: Contract;
-  let cert: string;
+  let cert = debugCert();
 
   for (let address of addresses) {
     const contract = new Contract(address, TLSDIDJson.abi, provider);
 
-    const verificationCert = debugCert();
-    const valid = await verifyContract(contract, did, verificationCert);
+    const valid = await verifyContract(contract, did, cert);
 
     if (valid && !validContract) {
       validContract = contract;
-      cert = verificationCert;
     } else if (valid) {
       //TODO Check did-resolver on how to handle errors
       throw new Error('Multiple valid contracts where found');
@@ -52,11 +39,7 @@ async function resolveContract(
   }
 }
 
-async function verifyContract(
-  contract: Contract,
-  did: string,
-  cert: string
-): Promise<boolean> {
+async function verifyContract(contract: Contract, did: string, cert: string): Promise<boolean> {
   const signature = await contract.signature();
 
   //Check for equal domain in DID and Contract
@@ -85,24 +68,16 @@ async function verifyContract(
   if (expiry.isZero()) {
     expiry = '';
   }
-  const hash = hashContract(didDomain, address, attributes, expiry);
 
+  const hash = hashContract(didDomain, address, attributes, expiry);
   //Check for correct signature
   const valid = verify(cert, signature, hash);
 
   return valid;
 }
 
-async function resolveTlsDid(
-  provider: providers.JsonRpcProvider,
-  registryAddress: string,
-  did: string
-): Promise<object> {
-  const { contract, jwk } = await resolveContract(
-    provider,
-    registryAddress,
-    did
-  );
+async function resolveTlsDid(provider: providers.JsonRpcProvider, registryAddress: string, did: string): Promise<object> {
+  const { contract, jwk } = await resolveContract(provider, registryAddress, did);
 
   const didDocument = {
     '@context': 'https://www.w3.org/ns/did/v1',
@@ -128,10 +103,7 @@ async function resolveTlsDid(
   return didDocument;
 }
 
-export function getResolver(
-  provider,
-  registry: string
-): { tls: (did: any) => Promise<object> } {
+export function getResolver(provider, registry: string): { tls: (did: any) => Promise<object> } {
   async function resolve(did) {
     return await resolveTlsDid(provider, registry, did);
   }
