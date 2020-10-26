@@ -18,7 +18,7 @@ async function resolveContract(
   const addresses = await registry.getContracts(did);
 
   //Retrive tls certification
-  let cert = debugCert();
+  let cert = await getCertFromServer(did);
 
   //Iterate over all contracts and verify if contract is valid
   //If multiple contracts are valid an error is thrown
@@ -57,9 +57,6 @@ async function verifyContract(contract: Contract, did: string, cert: string): Pr
     return false;
   }
 
-  //Retrive contract address
-  const address = await contract.address;
-
   //Retrive all attributes from the contract
   let attributes: IAttribute[] = [];
   let attributeCountBN: BigNumber;
@@ -82,7 +79,7 @@ async function verifyContract(contract: Contract, did: string, cert: string): Pr
   }
 
   //Hash contract values
-  const hash = hashContract(didDomain, address, attributes, expiry);
+  const hash = hashContract(didDomain, contract.address, attributes, expiry);
 
   //Check for correct signature
   const valid = verify(cert, signature, hash);

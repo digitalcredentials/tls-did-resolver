@@ -18,7 +18,7 @@ export function hashContract(domain: string, address: string, attributes?: IAttr
   return hash({ domain, address, attributes, expiry });
 }
 
-export async function getCertFromServer(did: string): Promise<string> {
+export async function getCertFromServer(did: string): Promise<IServerCert> {
   const domain = did.substring(8);
   return await SSLCertificate.get(domain);
 }
