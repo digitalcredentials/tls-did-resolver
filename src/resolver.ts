@@ -18,7 +18,7 @@ async function resolveContract(
   const addresses = await registry.getContracts(did);
 
   //Retrive tls certification
-  let cert = await getCertFromServer(did);
+  let cert = (await getCertFromServer(did)).pemEncoded;
 
   //Iterate over all contracts and verify if contract is valid
   //If multiple contracts are valid an error is thrown
