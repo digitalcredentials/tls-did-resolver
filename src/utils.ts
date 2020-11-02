@@ -24,7 +24,7 @@ export async function getCertFromServer(did: string): Promise<IServerCert> {
 }
 
 export function debugCert(): string {
-  const pemPath = '/__tests__/ssl/certs/testserver.pem';
+  const pemPath = '/../src/__tests__/ssl/certs/testserver.pem';
   return readFileSync(__dirname + pemPath, 'utf8');
 }
 
