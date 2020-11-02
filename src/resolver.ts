@@ -4,21 +4,27 @@ import TLSDIDJson from 'tls-did-registry/build/contracts/TLSDID.json';
 import TLSDIDRegistryJson from 'tls-did-registry/build/contracts/TLSDIDRegistry.json';
 import { hashContract, verify, x509ToJwk, addValueAtPath, getCertFromServer, debugCert } from './utils';
 
-export const REGISTRY = '0xefd425B44ed72fD3F7829007214Ba4907BFAF4D5';
+export const REGISTRY = '0x3be60Ca05feFafAD11610A5Cd4A098b584709750';
 
 async function resolveContract(
+  did: string,
   provider: providers.JsonRpcProvider,
-  registryAddress: string,
-  did: string
+  registryAddress: string = REGISTRY
 ): Promise<{ contract: Contract; jwk: JWK.RSAKey }> {
   //Setup TLS DID registry
   const registry = new Contract(registryAddress, TLSDIDRegistryJson.abi, provider);
 
   //Retrive all addresses stored in the registry for the did
-  const addresses = await registry.getContracts(did);
+  const domain = did.substring(8);
+  console.log('B', domain);
+  console.log('B', registryAddress);
+  const addresses = await registry.getContracts(domain);
+  console.log('A');
 
   //Retrive tls certification
-  let cert = (await getCertFromServer(did)).pemEncoded;
+  //TODO retrive from contract
+  //let cert = (await getCertFromServer(domain)).pemEncoded;
+  let cert = debugCert();
 
   //Iterate over all contracts and verify if contract is valid
   //If multiple contracts are valid an error is thrown
@@ -87,8 +93,8 @@ async function verifyContract(contract: Contract, did: string, cert: string): Pr
   return valid;
 }
 
-async function resolveTlsDid(provider: providers.JsonRpcProvider, registryAddress: string, did: string): Promise<object> {
-  const { contract, jwk } = await resolveContract(provider, registryAddress, did);
+async function resolveTlsDid(did: string, provider: providers.JsonRpcProvider, registryAddress?: string): Promise<object> {
+  const { contract, jwk } = await resolveContract(did, provider, registryAddress);
 
   //Set context and subject
   const didDocument = {
@@ -117,9 +123,9 @@ async function resolveTlsDid(provider: providers.JsonRpcProvider, registryAddres
   return didDocument;
 }
 
-export function getResolver(provider, registry: string): { tls: (did: any) => Promise<object> } {
+export function getResolver(provider, registryAddress?: string): { tls: (did: any) => Promise<object> } {
   async function resolve(did) {
-    return await resolveTlsDid(provider, registry, did);
+    return await resolveTlsDid(did, provider, registryAddress);
   }
   return { tls: resolve };
 }
