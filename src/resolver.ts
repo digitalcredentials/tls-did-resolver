@@ -1,5 +1,5 @@
 import { BigNumber, Contract, providers } from 'ethers';
-import { JWK } from 'jose';
+import { JWKRSAKey } from 'jose';
 import TLSDIDJson from 'tls-did-registry/build/contracts/TLSDID.json';
 import TLSDIDRegistryJson from 'tls-did-registry/build/contracts/TLSDIDRegistry.json';
 import { hashContract, verify, x509ToJwk, addValueAtPath, getCertFromServer, debugCert } from './utils';
@@ -10,7 +10,7 @@ async function resolveContract(
   did: string,
   provider: providers.JsonRpcProvider,
   registryAddress: string = REGISTRY
-): Promise<{ contract: Contract; jwk: JWK.RSAKey }> {
+): Promise<{ contract: Contract; jwk: JWKRSAKey }> {
   //Setup TLS DID registry
   const registry = new Contract(registryAddress, TLSDIDRegistryJson.abi, provider);
 

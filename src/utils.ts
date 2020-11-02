@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import { JWK } from 'jose';
+import { JWK, JWKRSAKey } from 'jose';
 import { readFileSync } from 'fs';
 import SSLCertificate from 'get-ssl-certificate';
 import hash from 'object-hash';
@@ -28,8 +28,8 @@ export function debugCert(): string {
   return readFileSync(__dirname + pemPath, 'utf8');
 }
 
-export function x509ToJwk(cert: string): JWK.RSAKey {
-  return <JWK.RSAKey>JWK.asKey(cert);
+export function x509ToJwk(cert: string): JWKRSAKey {
+  return <JWKRSAKey>JWK.asKey(cert).toJWK();
 }
 
 export function addValueAtPath(object: object, path: string, value: any) {
