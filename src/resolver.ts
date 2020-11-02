@@ -85,7 +85,6 @@ async function verifyContract(contract: Contract, did: string, cert: string): Pr
 
   //Check for correct signature
   const valid = verify(cert, signature, hash);
-
   return valid;
 }
 
