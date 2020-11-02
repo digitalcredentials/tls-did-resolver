@@ -4,7 +4,7 @@ import TLSDIDJson from 'tls-did-registry/build/contracts/TLSDID.json';
 import TLSDIDRegistryJson from 'tls-did-registry/build/contracts/TLSDIDRegistry.json';
 import { hashContract, verify, x509ToJwk, addValueAtPath, getCertFromServer, debugCert } from './utils';
 
-export const REGISTRY = '0x3be60Ca05feFafAD11610A5Cd4A098b584709750';
+export const REGISTRY = '0xf5513bc073A86394a0Fa26F11318D5D30AeAf550';
 
 async function resolveContract(
   did: string,
@@ -16,10 +16,7 @@ async function resolveContract(
 
   //Retrive all addresses stored in the registry for the did
   const domain = did.substring(8);
-  console.log('B', domain);
-  console.log('B', registryAddress);
   const addresses = await registry.getContracts(domain);
-  console.log('A');
 
   //Retrive tls certification
   //TODO retrive from contract
@@ -55,7 +52,6 @@ async function resolveContract(
 
 async function verifyContract(contract: Contract, did: string, cert: string): Promise<boolean> {
   const signature = await contract.signature();
-
   //Check for equal domain in DID and contract
   const didDomain = did.substring(8);
   const contractDomain = await contract.domain();
@@ -79,8 +75,8 @@ async function verifyContract(contract: Contract, did: string, cert: string): Pr
   let expiryBN: BigNumber;
   expiryBN = await contract.expiry();
   const expiry = new Date(expiryBN.toNumber());
-  const today = new Date();
-  if (expiry && expiry < today) {
+  const now = new Date();
+  if (expiry && expiry < now) {
     return false;
   }
 
