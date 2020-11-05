@@ -17,6 +17,9 @@ async function resolveContract(
   //Retrive all addresses stored in the registry for the did
   const domain = did.substring(8);
   const addresses = await registry.getContracts(domain);
+  if (addresses.length === 0) {
+    throw new Error('No contract was found');
+  }
 
   //Retrive tls certification
   //TODO retrive from contract
@@ -34,7 +37,7 @@ async function resolveContract(
     if (valid && !validContract) {
       validContract = contract;
     } else if (valid) {
-      throw new Error('Multiple valid contracts where found');
+      throw new Error(`${addresses.length} contracts were found. Multiple were valid.`);
     }
   }
 
@@ -46,7 +49,7 @@ async function resolveContract(
     return { contract: validContract, jwk };
   } else {
     //TODO Check did-resolver on how to handle errors
-    throw new Error('No valid contract was found');
+    throw new Error(`${addresses.length} contracts were found. None was valid.`);
   }
 }
 
