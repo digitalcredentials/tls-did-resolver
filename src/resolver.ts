@@ -2,6 +2,7 @@ import { BigNumber, Contract, providers } from 'ethers';
 import { JWKRSAKey } from 'jose';
 import TLSDIDJson from 'tls-did-registry/build/contracts/TLSDID.json';
 import TLSDIDRegistryJson from 'tls-did-registry/build/contracts/TLSDIDRegistry.json';
+import { Attribute } from './types';
 import { hashContract, verify, x509ToJwk, addValueAtPath, getCertFromServer, debugCert } from './utils';
 
 export const REGISTRY = '0xf5513bc073A86394a0Fa26F11318D5D30AeAf550';
@@ -63,7 +64,7 @@ async function verifyContract(contract: Contract, did: string, cert: string): Pr
   }
 
   //Retrive all attributes from the contract
-  let attributes: IAttribute[] = [];
+  let attributes: Attribute[] = [];
   let attributeCountBN: BigNumber;
   attributeCountBN = await contract.getAttributeCount();
   const attributeCount = attributeCountBN.toNumber();

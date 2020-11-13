@@ -1,9 +1,9 @@
-interface IAttribute {
+export type Attribute = {
   path: string;
   value: string;
-}
+};
 
-interface IServerCert {
+export type ServerCert = {
   subject: {
     CN: string;
   };
@@ -28,4 +28,4 @@ interface IServerCert {
   serialNumber: string;
   raw: Buffer;
   pemEncoded: string;
-}
+};

@@ -3,6 +3,7 @@ import { JWK, JWKRSAKey } from 'jose';
 import { readFileSync } from 'fs';
 import SSLCertificate from 'get-ssl-certificate';
 import hash from 'object-hash';
+import { Attribute, ServerCert } from './types';
 
 export function verify(pemCert: string, signature: string, data: string): boolean {
   const signatureBuffer = Buffer.from(signature, 'base64');
@@ -14,11 +15,11 @@ export function verify(pemCert: string, signature: string, data: string): boolea
 }
 
 //TODO Explore byte array
-export function hashContract(domain: string, address: string, attributes?: IAttribute[], expiry?: Date): string {
+export function hashContract(domain: string, address: string, attributes?: Attribute[], expiry?: Date): string {
   return hash({ domain, address, attributes, expiry });
 }
 
-export async function getCertFromServer(did: string): Promise<IServerCert> {
+export async function getCertFromServer(did: string): Promise<ServerCert> {
   const domain = did.substring(8);
   return await SSLCertificate.get(domain);
 }
