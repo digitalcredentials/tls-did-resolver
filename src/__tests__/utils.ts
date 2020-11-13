@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 import { readFileSync } from 'fs';
-import { verify, x509ToJwk, getCertFromServer, hashContract } from '../utils';
+import { verify, x509ToJwk, getCertFromServer, hashContract, addValueAtPath } from '../utils';
 import verificationJwk from './ssl/certs/tls-did-de-jwk.json';
 
 const pemKeyPath = '/ssl/private/testserver.pem';
@@ -46,5 +46,29 @@ describe('Utlis', () => {
     const serverCert = await getCertFromServer('did:tls:tls-did.de');
     const jwk = x509ToJwk(serverCert.pemEncoded);
     expect(jwk).toEqual(verificationJwk);
+  });
+
+  it('should add value to object in path', async () => {
+    let object = {};
+    const path = 'parent/child';
+    const value = 'value';
+    addValueAtPath(object, path, value);
+    expect(object).toEqual({ parent: { child: 'value' } });
+  });
+
+  it('should add value to object in path with array', async () => {
+    let object = {};
+    const path = 'parent[]/child';
+    const value = 'value';
+    addValueAtPath(object, path, value);
+    expect(object).toEqual({ parent: [{ child: 'value' }] });
+  });
+
+  it('should add value to object in path with existing array', async () => {
+    let object = { parent: [{ childA: 'valueA' }] };
+    const path = 'parent[]/childB';
+    const value = 'valueB';
+    addValueAtPath(object, path, value);
+    expect(object).toEqual({ parent: [{ childA: 'valueA' }, { childB: 'valueB' }] });
   });
 });

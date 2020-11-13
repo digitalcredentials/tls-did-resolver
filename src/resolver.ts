@@ -1,12 +1,21 @@
-import { BigNumber, Contract, providers } from 'ethers';
+import { BigNumber, Contract, ethers, providers } from 'ethers';
 import { JWKRSAKey } from 'jose';
 import TLSDIDJson from 'tls-did-registry/build/contracts/TLSDID.json';
 import TLSDIDRegistryJson from 'tls-did-registry/build/contracts/TLSDIDRegistry.json';
-import { Attribute } from './types';
+import { Attribute, Resolver } from './types';
 import { hashContract, verify, x509ToJwk, addValueAtPath, getCertFromServer, debugCert } from './utils';
 
-export const REGISTRY = '0xf5513bc073A86394a0Fa26F11318D5D30AeAf550';
+export const REGISTRY = '0x2E1C77c05F1547672eC1829Cb56FE7D8a498527e';
 
+/**
+ * Resolves TLS DID
+ *
+ * @param {string} did - TLS DID
+ * @param {providers.JsonRpcProvider} provider - Ethereum provider
+ * @param {string} registryAddress - Address of TLS DID Contract Registry
+ *
+ * @returns {Promise<{ contract: Contract; jwk: JWKRSAKey }>}
+ */
 async function resolveContract(
   did: string,
   provider: providers.JsonRpcProvider,
@@ -54,6 +63,13 @@ async function resolveContract(
   }
 }
 
+/**
+ * Verifies if TLS DID Contract signature is correct
+ *
+ * @param {ethers.Contract} contract - Ethers contract object
+ * @param {string} did - TLS DID
+ * @param {string} cert - Public pem certificate
+ */
 async function verifyContract(contract: Contract, did: string, cert: string): Promise<boolean> {
   const signature = await contract.signature();
   //Check for equal domain in DID and contract
@@ -92,6 +108,15 @@ async function verifyContract(contract: Contract, did: string, cert: string): Pr
   return valid;
 }
 
+/**
+ * Resolves TLS DID
+ *
+ * @param {string} did - TLS DID
+ * @param {providers.JsonRpcProvider} provider - Ethereum provider
+ * @param {string} registryAddress - Address of TLS DID Contract Registry
+ *
+ * @returns {Promise<DIDDocumentObject>}
+ */
 async function resolveTlsDid(did: string, provider: providers.JsonRpcProvider, registryAddress?: string): Promise<object> {
   const { contract, jwk } = await resolveContract(did, provider, registryAddress);
 
@@ -122,7 +147,15 @@ async function resolveTlsDid(did: string, provider: providers.JsonRpcProvider, r
   return didDocument;
 }
 
-export function getResolver(provider, registryAddress?: string): { tls: (did: any) => Promise<object> } {
+/**
+ * Gets TLS DID Resolver
+ *
+ * @param {providers.JsonRpcProvider} provider - Ethereum provider
+ * @param {string} registryAddress - Address of TLS DID Contract Registry
+ *
+ * @returns {Resolver}
+ */
+export function getResolver(provider, registryAddress?: string): Resolver {
   async function resolve(did) {
     return await resolveTlsDid(did, provider, registryAddress);
   }

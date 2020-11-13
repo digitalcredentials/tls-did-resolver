@@ -3,6 +3,10 @@ export type Attribute = {
   value: string;
 };
 
+export type Resolver = {
+  tls: (did: string) => Promise<object>;
+};
+
 export type ServerCert = {
   subject: {
     CN: string;
