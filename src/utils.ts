@@ -1,9 +1,10 @@
 import crypto from 'crypto';
 import { JWK, JWKRSAKey } from 'jose';
 import { readFileSync } from 'fs';
+import { providers } from 'ethers';
 import SSLCertificate from 'get-ssl-certificate';
 import hash from 'object-hash';
-import { Attribute, ServerCert } from './types';
+import { Attribute, ProviderConfig, ServerCert } from './types';
 
 /**
  * Verfies if signature is correct
@@ -88,4 +89,20 @@ export function addValueAtPath(object: object, path: string, value: any) {
       currentObj = currentObj[key];
     }
   });
+}
+
+/**
+ * Returns the configured provider
+ * @param {ProviderConfig} conf - Configuration for provider
+ */
+export function configureProvider(conf: ProviderConfig = {}): providers.Provider {
+  if (conf.provider) {
+    return conf.provider;
+  } else if (conf.rpcUrl) {
+    return new providers.JsonRpcProvider(conf.rpcUrl);
+  } else if (conf.web3) {
+    return new providers.Web3Provider(conf.web3.currentProvider);
+  } else {
+    return new providers.JsonRpcProvider('http://localhost:8545');
+  }
 }

@@ -1,11 +1,11 @@
-import { BigNumber, Contract, ethers, providers } from 'ethers';
+import { BigNumber, Contract, providers } from 'ethers';
 import { JWKRSAKey } from 'jose';
 import TLSDIDJson from 'tls-did-registry/build/contracts/TLSDID.json';
 import TLSDIDRegistryJson from 'tls-did-registry/build/contracts/TLSDIDRegistry.json';
-import { Attribute, Resolver } from './types';
-import { hashContract, verify, x509ToJwk, addValueAtPath, getCertFromServer, debugCert } from './utils';
+import { Attribute, ProviderConfig, Resolver } from './types';
+import { hashContract, verify, x509ToJwk, addValueAtPath, getCertFromServer, debugCert, configureProvider } from './utils';
 
-export const REGISTRY = '0x2E1C77c05F1547672eC1829Cb56FE7D8a498527e';
+export const REGISTRY = '0x33fD81799f172C8C932C9a3Fbc7dda9cdE26880A';
 
 /**
  * Resolves TLS DID
@@ -18,8 +18,8 @@ export const REGISTRY = '0x2E1C77c05F1547672eC1829Cb56FE7D8a498527e';
  */
 async function resolveContract(
   did: string,
-  provider: providers.JsonRpcProvider,
-  registryAddress: string = REGISTRY
+  provider: providers.Provider,
+  registryAddress: string
 ): Promise<{ contract: Contract; jwk: JWKRSAKey }> {
   //Setup TLS DID registry
   const registry = new Contract(registryAddress, TLSDIDRegistryJson.abi, provider);
@@ -117,7 +117,8 @@ async function verifyContract(contract: Contract, did: string, cert: string): Pr
  *
  * @returns {Promise<DIDDocumentObject>}
  */
-async function resolveTlsDid(did: string, provider: providers.JsonRpcProvider, registryAddress?: string): Promise<object> {
+async function resolveTlsDid(did: string, config: ProviderConfig = {}, registryAddress: string = REGISTRY): Promise<object> {
+  const provider = configureProvider(config);
   const { contract, jwk } = await resolveContract(did, provider, registryAddress);
 
   //Set context and subject
@@ -150,14 +151,14 @@ async function resolveTlsDid(did: string, provider: providers.JsonRpcProvider, r
 /**
  * Gets TLS DID Resolver
  *
- * @param {providers.JsonRpcProvider} provider - Ethereum provider
+ * @param {ProviderConfig} config - Ethereum provider
  * @param {string} registryAddress - Address of TLS DID Contract Registry
  *
  * @returns {Resolver}
  */
-export function getResolver(provider, registryAddress?: string): Resolver {
+export function getResolver(config?: ProviderConfig, registryAddress?: string): Resolver {
   async function resolve(did) {
-    return await resolveTlsDid(did, provider, registryAddress);
+    return await resolveTlsDid(did, config, registryAddress);
   }
   return { tls: resolve };
 }

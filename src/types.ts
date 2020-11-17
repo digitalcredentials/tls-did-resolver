@@ -1,3 +1,5 @@
+import { providers } from 'ethers';
+
 export type Attribute = {
   path: string;
   value: string;
@@ -5,6 +7,12 @@ export type Attribute = {
 
 export type Resolver = {
   tls: (did: string) => Promise<object>;
+};
+
+export type ProviderConfig = {
+  provider?: providers.Provider;
+  rpcUrl?: string;
+  web3?: any;
 };
 
 export type ServerCert = {
