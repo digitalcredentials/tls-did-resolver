@@ -74,7 +74,16 @@ export function addValueAtPath(object: object, path: string, value: any) {
 
   pathArr.forEach((key, index) => {
     if (index === pathArr.length - 1) {
-      currentObj[key] = value;
+      if (key.endsWith('[]')) {
+        key = key.slice(0, -2);
+        if (currentObj[key]) {
+          currentObj[key].push(value);
+        } else {
+          currentObj[key] = [value];
+        }
+      } else {
+        currentObj[key] = value;
+      }
     } else if (key.endsWith('[]')) {
       key = key.slice(0, -2);
       if (currentObj[key]) {

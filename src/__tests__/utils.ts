@@ -71,4 +71,20 @@ describe('Utlis', () => {
     addValueAtPath(object, path, value);
     expect(object).toEqual({ parent: [{ childA: 'valueA' }, { childB: 'valueB' }] });
   });
+
+  it('should add value to array in path', async () => {
+    let object = {};
+    const path = 'array[]';
+    const value = 'valueA';
+    addValueAtPath(object, path, value);
+    expect(object).toEqual({ array: ['valueA'] });
+  });
+
+  it('should add value to array in path with existing array', async () => {
+    let object = { array: ['valueA'] };
+    const path = 'array[]';
+    const value = 'valueB';
+    addValueAtPath(object, path, value);
+    expect(object).toEqual({ array: ['valueA', 'valueB'] });
+  });
 });
