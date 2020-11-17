@@ -1,7 +1,16 @@
 /// <reference types="node" />
+import { providers } from 'ethers';
 export declare type Attribute = {
     path: string;
     value: string;
+};
+export declare type Resolver = {
+    tls: (did: string) => Promise<object>;
+};
+export declare type ProviderConfig = {
+    provider?: providers.Provider;
+    rpcUrl?: string;
+    web3?: any;
 };
 export declare type ServerCert = {
     subject: {
