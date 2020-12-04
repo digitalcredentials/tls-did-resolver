@@ -1,12 +1,10 @@
 import { rootCertificates } from 'tls';
-import { pki, pem } from 'node-forge';
+import { pki } from 'node-forge';
 import crypto from 'crypto';
 import { JWK, JWKRSAKey } from 'jose';
-import { readFileSync } from 'fs';
 import { providers } from 'ethers';
-import SSLCertificate from 'get-ssl-certificate';
 import hash from 'object-hash';
-import { Attribute, ProviderConfig, ServerCert } from './types';
+import { Attribute, ProviderConfig } from './types';
 
 export function verifyCertificateChain() {
   console.log(rootCertificates);
@@ -38,24 +36,6 @@ export function verify(pemCert: string, signature: string, data: string): boolea
  */
 export function hashContract(domain: string, address: string, attributes?: Attribute[], expiry?: Date): string {
   return hash({ domain, address, attributes, expiry });
-}
-
-/**
- * Gets pem certificate from server
- *
- * @param {string} did - TLS DID
- */
-export async function getCertFromServer(did: string): Promise<ServerCert> {
-  const domain = did.substring(8);
-  return await SSLCertificate.get(domain);
-}
-
-/**
- * Gets pem certificate for debugging purposes
- */
-export function debugCert(): string {
-  const pemPath = '/../src/__tests__/ssl/certs/testserver.pem';
-  return readFileSync(__dirname + pemPath, 'utf8');
 }
 
 /**
@@ -132,11 +112,12 @@ export function chainToCerts(chain: string): string[] {
 }
 
 /**
- * Verifies pem cert chains against node's rootCertificates
+ * Verifies pem cert chains against node's rootCertificates and domain
  * @param {string[]} chain - Array of of aggregated pem certs strings
+ * @param {string} domain - Domain the leaf certificat should have as subject
  * @return { chain: string; valid: boolean }[] - Array of objects containing chain and validity
  */
-export function processChains(chains: string[]): { chain: string[]; valid: boolean }[] {
+export function processChains(chains: string[], domain: string): { chain: string[]; valid: boolean }[] {
   //Create caStore from node's rootCertificates
   //TODO Add support for EC certs
   console.log('No Support for EC root certs');
@@ -152,15 +133,35 @@ export function processChains(chains: string[]): { chain: string[]; valid: boole
   const definedPkis = pkis.filter((pki) => pki !== undefined);
   const caStore = pki.createCaStore(definedPkis);
 
-  //Verify each chain against the caStore
+  //Verify each chain against the caStore and domain
   const verifiedChains = chains.map((chain) => {
     const pemArray = chainToCerts(chain);
-    return verifyChain(pemArray, caStore);
+    return verifyChain(pemArray, domain, caStore);
   });
   return verifiedChains;
 }
 
-function verifyChain(chain: string[], caStore: pki.CAStore): { chain: string[]; valid: boolean } {
+/**
+ * Verifies pem cert chains against node's rootCertificates and domain
+ * @param {string[]} chain - Array of of aggregated pem certs strings
+ * @param {string} domain - Domain the leaf certificat should have as subject
+ * @param {pki.CAStore} caStore - Nodes root certificates in a node-forge compliant format
+ * @return { chain: string; valid: boolean }[] - Array of objects containing chain and validity
+ */
+function verifyChain(chain: string[], domain: string, caStore: pki.CAStore): { chain: string[]; valid: boolean } {
   const certificateArray = chain.map((pem) => pki.certificateFromPem(pem));
-  return { chain, valid: pki.verifyCertificateChain(caStore, certificateArray) };
+  const valid = pki.verifyCertificateChain(caStore, certificateArray) && verifyCertSubject(chain[0], domain);
+  return { chain, valid };
+}
+
+/**
+ * Verifies that the subject of a x509 certificate
+ * @param {string} cert - Website cert in pem format
+ * @param {string} subject
+ */
+function verifyCertSubject(cert: string, subject: string): boolean {
+  const pkiObject = pki.certificateFromPem(cert);
+  //TODO unclear if multiple subjects can be present in x509 certificate
+  //https://www.tools.ietf.org/html/rfc5280#section-4.1.2.6
+  return pkiObject.subject?.attributes[0]?.value === subject;
 }

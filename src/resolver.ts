@@ -4,17 +4,7 @@ import TLSDIDJson from 'tls-did-registry/build/contracts/TLSDID.json';
 import TLSDIDRegistryContract from 'tls-did-registry/build/contracts/TLSDIDRegistry.json';
 import TLSDIDCertRegistryContract from 'tls-did-registry/build/contracts/TLSDIDCertRegistry.json';
 import { Attribute, ProviderConfig, Resolver } from './types';
-import {
-  hashContract,
-  verify,
-  x509ToJwk,
-  addValueAtPath,
-  getCertFromServer,
-  debugCert,
-  configureProvider,
-  chainToCerts,
-  processChains,
-} from './utils';
+import { hashContract, verify, x509ToJwk, addValueAtPath, configureProvider, processChains } from './utils';
 
 export const REGISTRY = '0xA725A297b0F81c502df772DBE2D0AEb68788679d';
 export const CERT_REGISTRY = '0xBCC29C38aeA44A3B6576bF6fed8584BE63A910ac';
@@ -48,7 +38,7 @@ async function resolveContract(
   if (chains.length === 0) {
     throw new Error('No tls certificates were found.');
   }
-  const verfiedChains = processChains(chains);
+  const verfiedChains = processChains(chains, domain);
   const validChains = verfiedChains.filter((verfiedChain) => verfiedChain.valid);
   if (validChains.length === 0) {
     throw new Error('No valid tls chains was found.');

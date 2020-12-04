@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 import { readFileSync } from 'fs';
-import { verify, x509ToJwk, getCertFromServer, hashContract, addValueAtPath, processChains } from '../utils';
+import { verify, x509ToJwk, hashContract, addValueAtPath, processChains } from '../utils';
 import verificationJwk from './ssl/certs/tls-did-de-jwk.json';
 
 const keyPath = '/ssl/private/privKey.pem';
@@ -46,8 +46,7 @@ describe('Utlis', () => {
   });
 
   it('should transform x509 certificate to jwk', async () => {
-    const serverCert = await getCertFromServer('did:tls:tls-did.de');
-    const jwk = x509ToJwk(serverCert.pemEncoded);
+    const jwk = x509ToJwk(cert);
     expect(jwk).toEqual(verificationJwk);
   });
 
@@ -93,7 +92,7 @@ describe('Utlis', () => {
 
   it('should verify pem certificate', () => {
     const test = cert + '\n' + intermidiateCert;
-    const chain = processChains([test]);
+    const chain = processChains([test], 'tls-did.de');
     expect(chain[0].valid).toBeTruthy();
   });
 });

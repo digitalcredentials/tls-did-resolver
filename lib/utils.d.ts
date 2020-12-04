@@ -1,6 +1,6 @@
 import { JWKRSAKey } from 'jose';
 import { providers } from 'ethers';
-import { Attribute, ProviderConfig, ServerCert } from './types';
+import { Attribute, ProviderConfig } from './types';
 export declare function verifyCertificateChain(): void;
 /**
  * Verfies if signature is correct
@@ -19,16 +19,6 @@ export declare function verify(pemCert: string, signature: string, data: string)
  * @param {Date} expiry - TLS DID Contract expiry
  */
 export declare function hashContract(domain: string, address: string, attributes?: Attribute[], expiry?: Date): string;
-/**
- * Gets pem certificate from server
- *
- * @param {string} did - TLS DID
- */
-export declare function getCertFromServer(did: string): Promise<ServerCert>;
-/**
- * Gets pem certificate for debugging purposes
- */
-export declare function debugCert(): string;
 /**
  * Transforms x509 pem certificate to JWKRSAKey
  *
@@ -55,11 +45,12 @@ export declare function configureProvider(conf?: ProviderConfig): providers.Prov
  */
 export declare function chainToCerts(chain: string): string[];
 /**
- * Verifies pem cert chains against node's rootCertificates
+ * Verifies pem cert chains against node's rootCertificates and domain
  * @param {string[]} chain - Array of of aggregated pem certs strings
+ * @param {string} domain - Domain the leaf certificat should have as subject
  * @return { chain: string; valid: boolean }[] - Array of objects containing chain and validity
  */
-export declare function processChains(chains: string[]): {
+export declare function processChains(chains: string[], domain: string): {
     chain: string[];
     valid: boolean;
 }[];
