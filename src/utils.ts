@@ -118,6 +118,9 @@ export function chainToCerts(chain: string): string[] {
  * @return { chain: string; valid: boolean }[] - Array of objects containing chain and validity
  */
 export function processChains(chains: string[], domain: string): { chain: string[]; valid: boolean }[] {
+  //Filter duplicate chains
+  const filterdChains = Array.from(new Set(chains));
+
   //Create caStore from node's rootCertificates
   //TODO Add support for EC certs
   console.log('No Support for EC root certs');
@@ -134,7 +137,7 @@ export function processChains(chains: string[], domain: string): { chain: string
   const caStore = pki.createCaStore(definedPkis);
 
   //Verify each chain against the caStore and domain
-  const verifiedChains = chains.map((chain) => {
+  const verifiedChains = filterdChains.map((chain) => {
     const pemArray = chainToCerts(chain);
     return verifyChain(pemArray, domain, caStore);
   });
@@ -161,7 +164,7 @@ function verifyChain(chain: string[], domain: string, caStore: pki.CAStore): { c
  */
 function verifyCertSubject(cert: string, subject: string): boolean {
   const pkiObject = pki.certificateFromPem(cert);
-  //TODO unclear if multiple subjects can be present in x509 certificate
+  //TODO unclear if multiple subjects can be present in x509 leaf certificate
   //https://www.tools.ietf.org/html/rfc5280#section-4.1.2.6
   return pkiObject.subject?.attributes[0]?.value === subject;
 }
