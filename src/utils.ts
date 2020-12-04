@@ -1,3 +1,5 @@
+import { rootCertificates } from 'tls';
+import { pki, pem } from 'node-forge';
 import crypto from 'crypto';
 import { JWK, JWKRSAKey } from 'jose';
 import { readFileSync } from 'fs';
@@ -5,6 +7,10 @@ import { providers } from 'ethers';
 import SSLCertificate from 'get-ssl-certificate';
 import hash from 'object-hash';
 import { Attribute, ProviderConfig, ServerCert } from './types';
+
+export function verifyCertificateChain() {
+  console.log(rootCertificates);
+}
 
 /**
  * Verfies if signature is correct
@@ -114,4 +120,47 @@ export function configureProvider(conf: ProviderConfig = {}): providers.Provider
   } else {
     return new providers.JsonRpcProvider('http://localhost:8545');
   }
+}
+
+/**
+ * Splits string of pem keys to array of pem keys
+ * @param {string} chain - String of aggregated pem certs
+ * @return {string[]} - Array of pem cert string
+ */
+export function chainToCerts(chain: string): string[] {
+  return chain.split(/\n(?=-----BEGIN CERTIFICATE-----)/g);
+}
+
+/**
+ * Verifies pem cert chains against node's rootCertificates
+ * @param {string[]} chain - Array of of aggregated pem certs strings
+ * @return { chain: string; valid: boolean }[] - Array of objects containing chain and validity
+ */
+export function processChains(chains: string[]): { chain: string[]; valid: boolean }[] {
+  //Create caStore from node's rootCertificates
+  //TODO Add support for EC certs
+  console.log('No Support for EC root certs');
+  let unsupportedRootCertIdxs = [];
+  const pkis = rootCertificates.map((cert, idx) => {
+    try {
+      return pki.certificateFromPem(cert);
+    } catch {
+      unsupportedRootCertIdxs.push(idx);
+    }
+  });
+  console.log('unsupportedRootCertIdxs', unsupportedRootCertIdxs);
+  const definedPkis = pkis.filter((pki) => pki !== undefined);
+  const caStore = pki.createCaStore(definedPkis);
+
+  //Verify each chain against the caStore
+  const verifiedChains = chains.map((chain) => {
+    const pemArray = chainToCerts(chain);
+    return verifyChain(pemArray, caStore);
+  });
+  return verifiedChains;
+}
+
+function verifyChain(chain: string[], caStore: pki.CAStore): { chain: string[]; valid: boolean } {
+  const certificateArray = chain.map((pem) => pki.certificateFromPem(pem));
+  return { chain, valid: pki.verifyCertificateChain(caStore, certificateArray) };
 }

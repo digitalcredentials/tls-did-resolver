@@ -1,6 +1,7 @@
 import { JWKRSAKey } from 'jose';
 import { providers } from 'ethers';
 import { Attribute, ProviderConfig, ServerCert } from './types';
+export declare function verifyCertificateChain(): void;
 /**
  * Verfies if signature is correct
  *
@@ -47,3 +48,18 @@ export declare function addValueAtPath(object: object, path: string, value: any)
  * @param {ProviderConfig} conf - Configuration for provider
  */
 export declare function configureProvider(conf?: ProviderConfig): providers.Provider;
+/**
+ * Splits string of pem keys to array of pem keys
+ * @param {string} chain - String of aggregated pem certs
+ * @return {string[]} - Array of pem cert string
+ */
+export declare function chainToCerts(chain: string): string[];
+/**
+ * Verifies pem cert chains against node's rootCertificates
+ * @param {string[]} chain - Array of of aggregated pem certs strings
+ * @return { chain: string; valid: boolean }[] - Array of objects containing chain and validity
+ */
+export declare function processChains(chains: string[]): {
+    chain: string[];
+    valid: boolean;
+}[];

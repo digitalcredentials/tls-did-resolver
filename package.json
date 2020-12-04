@@ -24,10 +24,13 @@
     "typescript": "^4.0.3"
   },
   "dependencies": {
+    "@types/node-forge": "^0.9.5",
     "ethers": "^5.0.17",
     "get-ssl-certificate": "^2.3.3",
     "jose": "^2.0.2",
+    "node-forge": "^0.10.0",
     "object-hash": "^2.0.3",
+    "tls-did": "github:tls-did-project/tls-did#feature/KK-CertRegistry",
     "tls-did-registry": "github:tls-did-project/tls-did-registry#master"
   }
 }

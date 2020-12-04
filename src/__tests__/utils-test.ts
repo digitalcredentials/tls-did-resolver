@@ -1,32 +1,35 @@
 import crypto from 'crypto';
 import { readFileSync } from 'fs';
-import { verify, x509ToJwk, getCertFromServer, hashContract, addValueAtPath } from '../utils';
+import { verify, x509ToJwk, getCertFromServer, hashContract, addValueAtPath, processChains } from '../utils';
 import verificationJwk from './ssl/certs/tls-did-de-jwk.json';
 
-const pemKeyPath = '/ssl/private/testserver.pem';
-const pemCertPath = '/ssl/certs/testserver.pem';
-let pemKey: string;
-let pemCert: string;
+const keyPath = '/ssl/private/privKey.pem';
+const certPath = '/ssl/certs/cert.pem';
+const intermidiateCertPath = '/ssl/certs/intermediateCert.pem';
+let privKey: string;
+let cert: string;
+let intermidiateCert: string;
 
 //TODO import from tls-did
-function sign(pemKey, data) {
+function sign(privKey, data) {
   const signer = crypto.createSign('sha256');
   signer.update(data);
   signer.end();
-  const signature = signer.sign(pemKey).toString('base64');
+  const signature = signer.sign(privKey).toString('base64');
   return signature;
 }
 
 describe('Utlis', () => {
   beforeAll(() => {
-    pemKey = readFileSync(__dirname + pemKeyPath, 'utf8');
-    pemCert = readFileSync(__dirname + pemCertPath, 'utf8');
+    privKey = readFileSync(__dirname + keyPath, 'utf8');
+    cert = readFileSync(__dirname + certPath, 'utf8');
+    intermidiateCert = readFileSync(__dirname + intermidiateCertPath, 'utf8');
   });
 
   it('should encrypt and decrypt object with undefined values', async () => {
     const hash = hashContract('example.org', '0xdC2c16ccC8291c43B83D24E37900A3bed3EEd408');
-    const signature = sign(pemKey, hash);
-    const valid = verify(pemCert, signature, hash);
+    const signature = sign(privKey, hash);
+    const valid = verify(cert, signature, hash);
     expect(valid).toBeTruthy();
   });
 
@@ -37,8 +40,8 @@ describe('Utlis', () => {
       [{ path: 'parent/child', value: 'value' }],
       new Date()
     );
-    const signature = sign(pemKey, hash);
-    const valid = verify(pemCert, signature, hash);
+    const signature = sign(privKey, hash);
+    const valid = verify(cert, signature, hash);
     expect(valid).toBeTruthy();
   });
 
@@ -86,5 +89,11 @@ describe('Utlis', () => {
     const value = 'valueB';
     addValueAtPath(object, path, value);
     expect(object).toEqual({ array: ['valueA', 'valueB'] });
+  });
+
+  it('should verify pem certificate', () => {
+    const test = cert + '\n' + intermidiateCert;
+    const chain = processChains([test]);
+    expect(chain[0].valid).toBeTruthy();
   });
 });
