@@ -4,6 +4,7 @@ import crypto from 'crypto';
 import { JWK, JWKRSAKey } from 'jose';
 import { providers } from 'ethers';
 import hash from 'object-hash';
+import ocsp from 'ocsp';
 import { Attribute, ProviderConfig } from './types';
 
 export function verifyCertificateChain() {
@@ -117,7 +118,7 @@ export function chainToCerts(chain: string): string[] {
  * @param {string} domain - Domain the leaf certificat should have as subject
  * @return { chain: string; valid: boolean }[] - Array of objects containing chain and validity
  */
-export function processChains(chains: string[], domain: string): { chain: string[]; valid: boolean }[] {
+export async function processChains(chains: string[], domain: string): Promise<{ chain: string[]; valid: boolean }[]> {
   //Filter duplicate chains
   const filterdChains = Array.from(new Set(chains));
 
@@ -137,10 +138,11 @@ export function processChains(chains: string[], domain: string): { chain: string
   const caStore = pki.createCaStore(definedPkis);
 
   //Verify each chain against the caStore and domain
-  const verifiedChains = filterdChains.map((chain) => {
+  let verifiedChains = [];
+  for (let chain of filterdChains) {
     const pemArray = chainToCerts(chain);
-    return verifyChain(pemArray, domain, caStore);
-  });
+    verifiedChains.push(await verifyChain(pemArray, domain, caStore));
+  }
   return verifiedChains;
 }
 
@@ -151,9 +153,16 @@ export function processChains(chains: string[], domain: string): { chain: string
  * @param {pki.CAStore} caStore - Nodes root certificates in a node-forge compliant format
  * @return { chain: string; valid: boolean }[] - Array of objects containing chain and validity
  */
-function verifyChain(chain: string[], domain: string, caStore: pki.CAStore): { chain: string[]; valid: boolean } {
+async function verifyChain(
+  chain: string[],
+  domain: string,
+  caStore: pki.CAStore
+): Promise<{ chain: string[]; valid: boolean }> {
   const certificateArray = chain.map((pem) => pki.certificateFromPem(pem));
-  const valid = pki.verifyCertificateChain(caStore, certificateArray) && verifyCertSubject(chain[0], domain);
+  let valid = pki.verifyCertificateChain(caStore, certificateArray) && verifyCertSubject(chain[0], domain);
+  if (await checkForOCSP(chain[0])) {
+    valid = valid && (await checkOCSP(chain[0], chain[1]));
+  }
   return { chain, valid };
 }
 
@@ -167,4 +176,48 @@ function verifyCertSubject(cert: string, subject: string): boolean {
   //TODO unclear if multiple subjects can be present in x509 leaf certificate
   //https://www.tools.ietf.org/html/rfc5280#section-4.1.2.6
   return pkiObject.subject?.attributes[0]?.value === subject;
+}
+
+/**
+ * Checks OCSP
+ * @param {string} cert - Website cert in pem format
+ * @param {string} issuerCert - Cert of issuer in pem format
+ *
+ * @returns {Promise<boolean>} - True if valid
+ */
+export async function checkOCSP(cert: string, issuerCert: string): Promise<boolean> {
+  const response: boolean = await new Promise((resolve, reject) => {
+    ocsp.check(
+      {
+        cert: cert,
+        issuer: issuerCert,
+      },
+      function (err, res) {
+        if (!res) reject(err);
+        else {
+          const valid = res.type === 'good';
+          resolve(valid);
+        }
+      }
+    );
+  });
+  return response;
+}
+
+/**
+ * Checks for OCSP
+ * @param {string} cert - Website cert in pem format
+ *
+ * @returns {Promise<boolean>} - True if available
+ */
+export async function checkForOCSP(cert: string): Promise<boolean> {
+  const response: boolean = await new Promise((resolve, reject) => {
+    ocsp.getOCSPURI(cert, function (err, uri) {
+      if (!uri) reject(false);
+      else {
+        resolve(true);
+      }
+    });
+  });
+  return response;
 }

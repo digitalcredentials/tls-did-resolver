@@ -1,13 +1,15 @@
 import crypto from 'crypto';
 import { readFileSync } from 'fs';
-import { verify, x509ToJwk, hashContract, addValueAtPath, processChains } from '../utils';
+import { verify, x509ToJwk, hashContract, addValueAtPath, processChains, checkForOCSP, checkOCSP } from '../utils';
 import verificationJwk from './ssl/certs/tls-did-de-jwk.json';
 
 const keyPath = '/ssl/private/privKey.pem';
 const certPath = '/ssl/certs/cert.pem';
+const certRevokedPath = '/ssl/certs/certRevoked.pem';
 const intermidiateCertPath = '/ssl/certs/intermediateCert.pem';
 let privKey: string;
 let cert: string;
+let certRevoked: string;
 let intermidiateCert: string;
 
 //TODO import from tls-did
@@ -23,6 +25,7 @@ describe('Utlis', () => {
   beforeAll(() => {
     privKey = readFileSync(__dirname + keyPath, 'utf8');
     cert = readFileSync(__dirname + certPath, 'utf8');
+    certRevoked = readFileSync(__dirname + certRevokedPath, 'utf8');
     intermidiateCert = readFileSync(__dirname + intermidiateCertPath, 'utf8');
   });
 
@@ -90,9 +93,22 @@ describe('Utlis', () => {
     expect(object).toEqual({ array: ['valueA', 'valueB'] });
   });
 
-  it('should verify pem certificate', () => {
+  it('should verify pem certificate', async () => {
     const test = cert + '\n' + intermidiateCert;
-    const chain = processChains([test], 'tls-did.de');
+    const chain = await processChains([test], 'tls-did.de');
     expect(chain[0].valid).toBeTruthy();
+  });
+
+  it('should check if ocsp is available', async () => {
+    const response = await checkForOCSP(cert);
+    expect(response).toBeTruthy();
+  });
+
+  it('should verify ocsp status', async () => {
+    const responseA = await checkOCSP(cert, intermidiateCert);
+    expect(responseA).toBeTruthy();
+
+    const responseB = await checkOCSP(certRevoked, intermidiateCert);
+    expect(responseB).toBeFalsy();
   });
 });

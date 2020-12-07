@@ -50,7 +50,22 @@ export declare function chainToCerts(chain: string): string[];
  * @param {string} domain - Domain the leaf certificat should have as subject
  * @return { chain: string; valid: boolean }[] - Array of objects containing chain and validity
  */
-export declare function processChains(chains: string[], domain: string): {
+export declare function processChains(chains: string[], domain: string): Promise<{
     chain: string[];
     valid: boolean;
-}[];
+}[]>;
+/**
+ * Checks OCSP
+ * @param {string} cert - Website cert in pem format
+ * @param {string} issuerCert - Cert of issuer in pem format
+ *
+ * @returns {Promise<boolean>} - True if valid
+ */
+export declare function checkOCSP(cert: string, issuerCert: string): Promise<boolean>;
+/**
+ * Checks for OCSP
+ * @param {string} cert - Website cert in pem format
+ *
+ * @returns {Promise<boolean>} - True if available
+ */
+export declare function checkForOCSP(cert: string): Promise<boolean>;

@@ -38,7 +38,7 @@ async function resolveContract(
   if (chains.length === 0) {
     throw new Error('No tls certificates were found.');
   }
-  const verfiedChains = processChains(chains, domain);
+  const verfiedChains = await processChains(chains, domain);
   const validChains = verfiedChains.filter((verfiedChain) => verfiedChain.valid);
   if (validChains.length === 0) {
     throw new Error('No valid tls chains was found.');

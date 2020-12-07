@@ -30,6 +30,7 @@
     "jose": "^2.0.2",
     "node-forge": "^0.10.0",
     "object-hash": "^2.0.3",
+    "ocsp": "^1.2.0",
     "tls-did": "github:tls-did-project/tls-did#feature/KK-CertRegistry",
     "tls-did-registry": "github:tls-did-project/tls-did-registry#master"
   }
