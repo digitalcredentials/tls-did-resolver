@@ -1,3 +1,4 @@
+import { pki } from 'node-forge';
 import { JWKRSAKey } from 'jose';
 import { providers } from 'ethers';
 import { Attribute, ProviderConfig } from './types';
@@ -48,12 +49,9 @@ export declare function chainToCerts(chain: string): string[];
  * Verifies pem cert chains against node's rootCertificates and domain
  * @param {string[]} chain - Array of of aggregated pem certs strings
  * @param {string} domain - Domain the leaf certificat should have as subject
- * @return { chain: string; valid: boolean }[] - Array of objects containing chain and validity
+ * @return { chain: string}[] - Array of valid chains
  */
-export declare function processChains(chains: string[], domain: string): Promise<{
-    chain: string[];
-    valid: boolean;
-}[]>;
+export declare function processChains(chains: string[], domain: string): Promise<string[][]>;
 /**
  * Checks OCSP
  * @param {string} cert - Website cert in pem format
@@ -68,4 +66,4 @@ export declare function checkOCSP(cert: string, issuerCert: string): Promise<boo
  *
  * @returns {Promise<boolean>} - True if available
  */
-export declare function checkForOCSP(cert: string): Promise<boolean>;
+export declare function checkForOCSPUri(cert: pki.Certificate): string | null;
