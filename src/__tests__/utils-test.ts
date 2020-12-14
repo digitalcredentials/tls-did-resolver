@@ -1,6 +1,7 @@
 import crypto from 'crypto';
+import { pki } from 'node-forge';
 import { readFileSync } from 'fs';
-import { verify, x509ToJwk, hashContract, addValueAtPath, processChains, checkForOCSP, checkOCSP } from '../utils';
+import { verify, x509ToJwk, hashContract, addValueAtPath, processChains, checkForOCSPUri, checkOCSP } from '../utils';
 import verificationJwk from './ssl/certs/tls-did-de-jwk.json';
 
 const keyPath = '/ssl/private/privKey.pem';
@@ -94,13 +95,16 @@ describe('Utlis', () => {
   });
 
   it('should verify pem certificate', async () => {
-    const test = cert + '\n' + intermidiateCert;
-    const chain = await processChains([test], 'tls-did.de');
-    expect(chain[0].valid).toBeTruthy();
+    const chain = cert + '\n' + intermidiateCert;
+    const validChains = await processChains([chain], 'tls-did.de');
+    expect(validChains.length).toEqual(1);
+    expect(validChains[0][0]).toEqual(cert);
+    expect(validChains[0][1]).toEqual(intermidiateCert);
   });
 
   it('should check if ocsp is available', async () => {
-    const response = await checkForOCSP(cert);
+    const pkiCert = pki.certificateFromPem(cert);
+    const response = await checkForOCSPUri(pkiCert);
     expect(response).toBeTruthy();
   });
 

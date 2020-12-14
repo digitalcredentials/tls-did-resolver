@@ -1,5 +1,5 @@
 import { rootCertificates } from 'tls';
-import { pki } from 'node-forge';
+import { pki, asn1 } from 'node-forge';
 import crypto from 'crypto';
 import { JWK, JWKRSAKey } from 'jose';
 import { providers } from 'ethers';
@@ -92,11 +92,11 @@ export function addValueAtPath(object: object, path: string, value: any) {
  * @param {ProviderConfig} conf - Configuration for provider
  */
 export function configureProvider(conf: ProviderConfig = {}): providers.Provider {
-  if (conf.provider) {
+  if (conf?.provider) {
     return conf.provider;
-  } else if (conf.rpcUrl) {
+  } else if (conf?.rpcUrl) {
     return new providers.JsonRpcProvider(conf.rpcUrl);
-  } else if (conf.web3) {
+  } else if (conf?.web3) {
     return new providers.Web3Provider(conf.web3.currentProvider);
   } else {
     return new providers.JsonRpcProvider('http://localhost:8545');
@@ -116,9 +116,9 @@ export function chainToCerts(chain: string): string[] {
  * Verifies pem cert chains against node's rootCertificates and domain
  * @param {string[]} chain - Array of of aggregated pem certs strings
  * @param {string} domain - Domain the leaf certificat should have as subject
- * @return { chain: string; valid: boolean }[] - Array of objects containing chain and validity
+ * @return { chain: string}[] - Array of valid chains
  */
-export async function processChains(chains: string[], domain: string): Promise<{ chain: string[]; valid: boolean }[]> {
+export async function processChains(chains: string[], domain: string): Promise<string[][]> {
   //Filter duplicate chains
   const filterdChains = Array.from(new Set(chains));
 
@@ -141,7 +141,9 @@ export async function processChains(chains: string[], domain: string): Promise<{
   let verifiedChains = [];
   for (let chain of filterdChains) {
     const pemArray = chainToCerts(chain);
-    verifiedChains.push(await verifyChain(pemArray, domain, caStore));
+    if (await verifyChain(pemArray, domain, caStore)) {
+      verifiedChains.push(pemArray);
+    }
   }
   return verifiedChains;
 }
@@ -153,17 +155,14 @@ export async function processChains(chains: string[], domain: string): Promise<{
  * @param {pki.CAStore} caStore - Nodes root certificates in a node-forge compliant format
  * @return { chain: string; valid: boolean }[] - Array of objects containing chain and validity
  */
-async function verifyChain(
-  chain: string[],
-  domain: string,
-  caStore: pki.CAStore
-): Promise<{ chain: string[]; valid: boolean }> {
+async function verifyChain(chain: string[], domain: string, caStore: pki.CAStore): Promise<{ valid: boolean }> {
   const certificateArray = chain.map((pem) => pki.certificateFromPem(pem));
   let valid = pki.verifyCertificateChain(caStore, certificateArray) && verifyCertSubject(chain[0], domain);
-  if (await checkForOCSP(chain[0])) {
+  const ocspUri = checkForOCSPUri(certificateArray[0]);
+  if (ocspUri) {
     valid = valid && (await checkOCSP(chain[0], chain[1]));
   }
-  return { chain, valid };
+  return { valid };
 }
 
 /**
@@ -210,14 +209,21 @@ export async function checkOCSP(cert: string, issuerCert: string): Promise<boole
  *
  * @returns {Promise<boolean>} - True if available
  */
-export async function checkForOCSP(cert: string): Promise<boolean> {
-  const response: boolean = await new Promise((resolve, reject) => {
-    ocsp.getOCSPURI(cert, function (err, uri) {
-      if (!uri) reject(false);
-      else {
-        resolve(true);
-      }
-    });
-  });
-  return response;
+export function checkForOCSPUri(cert: pki.Certificate): string | null {
+  // Return value type incorect
+  const aIAExtension = cert.getExtension('authorityInfoAccess') as { value: string } | null;
+  if (aIAExtension === null) {
+    return null;
+  }
+  const aIAValue = asn1.fromDer(aIAExtension.value);
+  let aIAValues = [];
+  for (let value of aIAValue.value) {
+    const test = <{ certificateExtensionFromAsn1: (asn1: any) => any }>(<unknown>pki);
+    aIAValues.push(test.certificateExtensionFromAsn1(value));
+  }
+  const oscpExtensions = aIAValues.filter((value) => (value.id = '1.3.6.1.5.5.7.48.1'));
+  if (oscpExtensions.length === 0) {
+    return null;
+  }
+  return oscpExtensions[0].value;
 }

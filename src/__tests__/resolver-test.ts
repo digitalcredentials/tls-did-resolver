@@ -17,11 +17,10 @@ describe('Resolver', () => {
     intermediateCert = readFileSync(__dirname + c.intermediateCertPath, 'utf8');
     const pemKey = readFileSync(__dirname + c.privKeyPath, 'utf8');
 
-    resolver = getResolver();
+    resolver = getResolver(null, c.registryAddress);
 
     tlsDid = new TLSDID(pemKey, c.etherPrivKey, {
       registry: c.registryAddress,
-      certRegistry: c.certRegistryAddress,
       providerConfig: {
         rpcUrl: c.jsonRpcUrl,
       },
@@ -29,7 +28,6 @@ describe('Resolver', () => {
     await tlsDid.deployContract();
     const random = Math.random().toString(36).substring(7);
 
-    console.log('Registering contract with domain:', tlsDid.domain);
     await tlsDid.registerContract(domain);
     const chain = [cert, intermediateCert];
     await tlsDid.registerChain(chain);

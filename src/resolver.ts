@@ -2,12 +2,10 @@ import { BigNumber, Contract, providers } from 'ethers';
 import { JWKRSAKey } from 'jose';
 import TLSDIDJson from 'tls-did-registry/build/contracts/TLSDID.json';
 import TLSDIDRegistryContract from 'tls-did-registry/build/contracts/TLSDIDRegistry.json';
-import TLSDIDCertRegistryContract from 'tls-did-registry/build/contracts/TLSDIDCertRegistry.json';
 import { Attribute, ProviderConfig, Resolver } from './types';
 import { hashContract, verify, x509ToJwk, addValueAtPath, configureProvider, processChains } from './utils';
 
 export const REGISTRY = '0xA725A297b0F81c502df772DBE2D0AEb68788679d';
-export const CERT_REGISTRY = '0xBCC29C38aeA44A3B6576bF6fed8584BE63A910ac';
 
 /**
  * Resolves TLS DID
@@ -33,35 +31,36 @@ async function resolveContract(
     throw new Error('No contract was found');
   }
 
-  //Retrive tls x509 certs from TLS DID Certificate Contract
-  const chains = await getChains(domain, provider);
-  if (chains.length === 0) {
-    throw new Error('No tls certificates were found.');
-  }
-  const verfiedChains = await processChains(chains, domain);
-  const validChains = verfiedChains.filter((verfiedChain) => verfiedChain.valid);
-  if (validChains.length === 0) {
-    throw new Error('No valid tls chains was found.');
-  } else if (validChains.length > 1) {
-    throw new Error('Multiple valid tls chains were found.');
-  }
-
   //Iterate over all contracts and verify if contract is valid
   //If multiple contracts are valid an error is thrown
   let validContract: Contract;
+  let validChain: string[];
   for (let address of addresses) {
     const contract = new Contract(address, TLSDIDJson.abi, provider);
+
+    //Retrive tls x509 certs
+    const chains = await getChains(contract, provider);
+    if (chains.length === 0) {
+      throw new Error('No tls certificates were found.');
+    }
+    const validChains = await processChains(chains, domain);
+    if (validChains.length === 0) {
+      //No valid chain
+      continue;
+    }
+    //If multiple chains a present use the newest
 
     //Verifies contract with server cert
     let valid;
     try {
-      valid = await verifyContract(contract, did, validChains[0].chain[0]);
+      valid = await verifyContract(contract, did, validChains[0][0]);
     } catch (err) {
       console.log(err);
     }
 
     if (valid && !validContract) {
       validContract = contract;
+      validChain = validChains[0];
     } else if (valid) {
       throw new Error(`${addresses.length} contracts were found. Multiple were valid.`);
     }
@@ -72,7 +71,7 @@ async function resolveContract(
   //If no valid contract was found an error is thrown
   if (validContract) {
     //TODO
-    const jwk = x509ToJwk(validChains[0].chain[0]);
+    const jwk = x509ToJwk(validChain[0]);
     return { contract: validContract, jwk };
   } else {
     //TODO Check did-resolver on how to handle errors
@@ -80,15 +79,13 @@ async function resolveContract(
   }
 }
 
-async function getChains(domain, provider): Promise<string[]> {
-  const certRegistry = new Contract(CERT_REGISTRY, TLSDIDCertRegistryContract.abi, provider);
-
-  //Retrive all chains from TLS Cert Registry
-  const chainCountBN: BigNumber = await certRegistry.getChainCount(domain);
+async function getChains(contract, provider): Promise<string[]> {
+  //Retrive all chains from TLS DID contract
+  const chainCountBN: BigNumber = await contract.getChainCount();
   const chainCount = chainCountBN.toNumber();
   let chains = [];
   for (let i = 0; i < chainCount; i++) {
-    const cert = await certRegistry.getChain(domain, i);
+    const cert = await contract.getChain(i);
     chains.push(cert);
   }
 
