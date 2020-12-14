@@ -8,4 +8,4 @@ export declare const REGISTRY = "0xA725A297b0F81c502df772DBE2D0AEb68788679d";
  *
  * @returns {Resolver}
  */
-export declare function getResolver(config?: ProviderConfig, registryAddress?: string): Resolver;
+export declare function getResolver(config?: ProviderConfig, registryAddress?: string, rootCertificates?: string[]): Resolver;

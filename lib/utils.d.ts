@@ -2,7 +2,6 @@ import { pki } from 'node-forge';
 import { JWKRSAKey } from 'jose';
 import { providers } from 'ethers';
 import { Attribute, ProviderConfig } from './types';
-export declare function verifyCertificateChain(): void;
 /**
  * Verfies if signature is correct
  *
@@ -51,7 +50,7 @@ export declare function chainToCerts(chain: string): string[];
  * @param {string} domain - Domain the leaf certificat should have as subject
  * @return { chain: string}[] - Array of valid chains
  */
-export declare function processChains(chains: string[], domain: string): Promise<string[][]>;
+export declare function processChains(chains: string[], domain: string, rootCertificates: readonly string[]): Promise<string[][]>;
 /**
  * Checks OCSP
  * @param {string} cert - Website cert in pem format

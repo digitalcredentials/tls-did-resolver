@@ -1,3 +1,4 @@
+import { rootCertificates } from 'tls';
 import crypto from 'crypto';
 import { pki } from 'node-forge';
 import { readFileSync } from 'fs';
@@ -96,7 +97,7 @@ describe('Utlis', () => {
 
   it('should verify pem certificate', async () => {
     const chain = cert + '\n' + intermidiateCert;
-    const validChains = await processChains([chain], 'tls-did.de');
+    const validChains = await processChains([chain], 'tls-did.de', rootCertificates);
     expect(validChains.length).toEqual(1);
     expect(validChains[0][0]).toEqual(cert);
     expect(validChains[0][1]).toEqual(intermidiateCert);

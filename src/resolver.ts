@@ -1,3 +1,4 @@
+import { rootCertificates as nodeRootCertificates } from 'tls';
 import { BigNumber, Contract, providers } from 'ethers';
 import { JWKRSAKey } from 'jose';
 import TLSDIDJson from 'tls-did-registry/build/contracts/TLSDID.json';
@@ -19,7 +20,8 @@ export const REGISTRY = '0xA725A297b0F81c502df772DBE2D0AEb68788679d';
 async function resolveContract(
   did: string,
   provider: providers.Provider,
-  registryAddress: string
+  registryAddress: string,
+  rootCertificates: readonly string[]
 ): Promise<{ contract: Contract; jwk: JWKRSAKey }> {
   //Setup TLS DID registry
   const registry = new Contract(registryAddress, TLSDIDRegistryContract.abi, provider);
@@ -43,7 +45,7 @@ async function resolveContract(
     if (chains.length === 0) {
       throw new Error('No tls certificates were found.');
     }
-    const validChains = await processChains(chains, domain);
+    const validChains = await processChains(chains, domain, rootCertificates);
     if (validChains.length === 0) {
       //No valid chain
       continue;
@@ -147,9 +149,14 @@ async function verifyContract(contract: Contract, did: string, cert: string): Pr
  *
  * @returns {Promise<DIDDocumentObject>}
  */
-async function resolveTlsDid(did: string, config: ProviderConfig = {}, registryAddress: string = REGISTRY): Promise<object> {
+async function resolveTlsDid(
+  did: string,
+  config: ProviderConfig = {},
+  registryAddress: string = REGISTRY,
+  rootCertificates: readonly string[] = nodeRootCertificates
+): Promise<object> {
   const provider = configureProvider(config);
-  const { contract, jwk } = await resolveContract(did, provider, registryAddress);
+  const { contract, jwk } = await resolveContract(did, provider, registryAddress, rootCertificates);
 
   //Set context and subject
   const didDocument = {
@@ -186,9 +193,9 @@ async function resolveTlsDid(did: string, config: ProviderConfig = {}, registryA
  *
  * @returns {Resolver}
  */
-export function getResolver(config?: ProviderConfig, registryAddress?: string): Resolver {
+export function getResolver(config?: ProviderConfig, registryAddress?: string, rootCertificates?: string[]): Resolver {
   async function resolve(did) {
-    return await resolveTlsDid(did, config, registryAddress);
+    return await resolveTlsDid(did, config, registryAddress, rootCertificates);
   }
   return { tls: resolve };
 }

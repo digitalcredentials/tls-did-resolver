@@ -1,4 +1,3 @@
-import { rootCertificates } from 'tls';
 import { pki, asn1 } from 'node-forge';
 import crypto from 'crypto';
 import { JWK, JWKRSAKey } from 'jose';
@@ -6,10 +5,6 @@ import { providers } from 'ethers';
 import hash from 'object-hash';
 import ocsp from 'ocsp';
 import { Attribute, ProviderConfig } from './types';
-
-export function verifyCertificateChain() {
-  console.log(rootCertificates);
-}
 
 /**
  * Verfies if signature is correct
@@ -118,7 +113,11 @@ export function chainToCerts(chain: string): string[] {
  * @param {string} domain - Domain the leaf certificat should have as subject
  * @return { chain: string}[] - Array of valid chains
  */
-export async function processChains(chains: string[], domain: string): Promise<string[][]> {
+export async function processChains(
+  chains: string[],
+  domain: string,
+  rootCertificates: readonly string[]
+): Promise<string[][]> {
   //Filter duplicate chains
   const filterdChains = Array.from(new Set(chains));
 
