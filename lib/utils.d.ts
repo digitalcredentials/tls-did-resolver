@@ -17,8 +17,9 @@ export declare function verify(pemCert: string, signature: string, data: string)
  * @param {string} address - TLS DID Contract address
  * @param {Attribute[]} attributes - Additional TLS DID Documents attributes
  * @param {Date} expiry - TLS DID Contract expiry
+ * @param {string[][]} chains - TLS DID Contract certificate chains
  */
-export declare function hashContract(domain: string, address: string, attributes?: Attribute[], expiry?: Date): string;
+export declare function hashContract(domain: string, address: string, attributes?: Attribute[], expiry?: Date, chains?: string[][]): string;
 /**
  * Transforms x509 pem certificate to JWKRSAKey
  *
