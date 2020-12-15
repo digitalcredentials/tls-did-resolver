@@ -15,10 +15,10 @@ describe('Resolver', () => {
   beforeAll(async () => {
     cert = readFileSync(__dirname + c.certPath, 'utf8');
     intermediateCert = readFileSync(__dirname + c.intermediateCertPath, 'utf8');
+    const rootCert = readFileSync(__dirname + c.rootCertPath, 'utf8');
+    resolver = getResolver(null, c.registryAddress, [rootCert]);
+
     const pemKey = readFileSync(__dirname + c.privKeyPath, 'utf8');
-
-    resolver = getResolver(null, c.registryAddress);
-
     tlsDid = new TLSDID(pemKey, c.etherPrivKey, {
       registry: c.registryAddress,
       providerConfig: {

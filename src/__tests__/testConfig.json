@@ -4,5 +4,6 @@
   "etherPrivKey": "0x2afa99eb4bb26f02f1d2f40808e5cc629c78dcd8a9f54ff5a7fb2e5dae6e702b",
   "privKeyPath": "/ssl/private/privKey.pem",
   "certPath": "/ssl/certs/cert.pem",
-  "intermediateCertPath": "/ssl/certs/intermediateCert.pem"
+  "intermediateCertPath": "/ssl/certs/intermediateCert.pem",
+  "rootCertPath": "/ssl/certs/DSTRootCAX3.pem"
 }
