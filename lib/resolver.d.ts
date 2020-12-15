@@ -1,4 +1,5 @@
-import { ProviderConfig, Resolver } from './types';
+import { ProviderConfig } from './types';
+import { DIDResolver } from 'did-resolver';
 export declare const REGISTRY = "0xA725A297b0F81c502df772DBE2D0AEb68788679d";
 /**
  * Gets TLS DID Resolver
@@ -8,4 +9,6 @@ export declare const REGISTRY = "0xA725A297b0F81c502df772DBE2D0AEb68788679d";
  *
  * @returns {Resolver}
  */
-export declare function getResolver(config?: ProviderConfig, registryAddress?: string, rootCertificates?: string[]): Resolver;
+export declare function getResolver(config?: ProviderConfig, registryAddress?: string, rootCertificates?: string[]): {
+    [index: string]: DIDResolver;
+};

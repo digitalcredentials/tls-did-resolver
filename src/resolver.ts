@@ -3,8 +3,9 @@ import { BigNumber, Contract, providers } from 'ethers';
 import { JWKRSAKey } from 'jose';
 import TLSDIDJson from 'tls-did-registry/build/contracts/TLSDID.json';
 import TLSDIDRegistryContract from 'tls-did-registry/build/contracts/TLSDIDRegistry.json';
-import { Attribute, ProviderConfig, Resolver } from './types';
+import { Attribute, ProviderConfig } from './types';
 import { hashContract, verify, x509ToJwk, addValueAtPath, configureProvider, processChains } from './utils';
+import { DIDDocument, DIDResolver } from 'did-resolver';
 
 export const REGISTRY = '0xA725A297b0F81c502df772DBE2D0AEb68788679d';
 
@@ -154,25 +155,16 @@ async function resolveTlsDid(
   config: ProviderConfig = {},
   registryAddress: string = REGISTRY,
   rootCertificates: readonly string[] = nodeRootCertificates
-): Promise<object> {
+): Promise<DIDDocument> {
   const provider = configureProvider(config);
   const { contract, jwk } = await resolveContract(did, provider, registryAddress, rootCertificates);
 
   //Set context and subject
-  const didDocument = {
+  let didDocument: DIDDocument = {
     '@context': 'https://www.w3.org/ns/did/v1',
     id: did,
+    publicKey: [],
   };
-
-  //Set verification method based on JWK representation of tls pem certificate
-  didDocument['verificationMethod'] = [
-    {
-      id: `${did}#keys-1`,
-      type: 'JsonWebKey2020',
-      controller: did,
-      publicKeyJwk: jwk,
-    },
-  ];
 
   //Set attributes by appending attribute values to the DID Document object
   const attributeCount = await contract.getAttributeCount();
@@ -193,8 +185,12 @@ async function resolveTlsDid(
  *
  * @returns {Resolver}
  */
-export function getResolver(config?: ProviderConfig, registryAddress?: string, rootCertificates?: string[]): Resolver {
-  async function resolve(did) {
+export function getResolver(
+  config?: ProviderConfig,
+  registryAddress?: string,
+  rootCertificates?: string[]
+): { [index: string]: DIDResolver } {
+  async function resolve(did: string): Promise<DIDDocument> {
     return await resolveTlsDid(did, config, registryAddress, rootCertificates);
   }
   return { tls: resolve };

@@ -5,10 +5,6 @@ export type Attribute = {
   value: string;
 };
 
-export type Resolver = {
-  tls: (did: string) => Promise<object>;
-};
-
 export type ProviderConfig = {
   provider?: providers.Provider;
   rpcUrl?: string;

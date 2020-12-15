@@ -1,9 +1,10 @@
 import { readFileSync } from 'fs';
-import { getResolver } from '../index';
+import tls from '../index';
 import { TLSDID } from 'tls-did';
+import { Resolver, DIDResolver } from 'did-resolver';
 import c from './testConfig.json';
 
-let resolver: { tls: (did: any) => Promise<object> };
+let tlsResolver: { [index: string]: DIDResolver };
 let tlsDid: TLSDID;
 
 let cert: string;
@@ -16,7 +17,7 @@ describe('Resolver', () => {
     cert = readFileSync(__dirname + c.certPath, 'utf8');
     intermediateCert = readFileSync(__dirname + c.intermediateCertPath, 'utf8');
     const rootCert = readFileSync(__dirname + c.rootCertPath, 'utf8');
-    resolver = getResolver(null, c.registryAddress, [rootCert]);
+    tlsResolver = tls.getResolver(null, c.registryAddress, [rootCert]);
 
     const pemKey = readFileSync(__dirname + c.privKeyPath, 'utf8');
     tlsDid = new TLSDID(pemKey, c.etherPrivKey, {
@@ -34,7 +35,14 @@ describe('Resolver', () => {
     await tlsDid.setExpiry(new Date('2040/12/12'));
   });
   it('should resolve did', async () => {
-    const didDocument = await resolver.tls(`did:tls:${tlsDid.domain}`);
+    const didDocument = await tlsResolver.tls(`did:tls:${tlsDid.domain}`, null, null);
+    //TODO improve testing
+    expect(didDocument).toBeTruthy();
+  });
+
+  it('should resolve did with universal resolver', async () => {
+    const resolver = new Resolver({ ...tlsResolver });
+    const didDocument = await resolver.resolve(`did:tls:${tlsDid.domain}`);
     //TODO improve testing
     expect(didDocument).toBeTruthy();
   });

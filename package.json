@@ -26,12 +26,14 @@
   },
   "dependencies": {
     "@types/node-forge": "^0.9.5",
+    "did-resolver": "^2.1.2",
     "ethers": "^5.0.17",
     "get-ssl-certificate": "^2.3.3",
     "jose": "^2.0.2",
     "node-forge": "^0.10.0",
     "object-hash": "^2.0.3",
     "ocsp": "^1.2.0",
+    "save-dev": "^0.0.1-security",
     "tls-did": "github:tls-did-project/tls-did#development",
     "tls-did-registry": "github:tls-did-project/tls-did-registry#master"
   }
