@@ -55,7 +55,7 @@ async function resolveContract(
     //Verifies contract with server cert
     let valid;
     try {
-      valid = await verifyContract(contract, did, validChains[0][0]);
+      valid = await verifyContract(contract, did, validChains);
     } catch (err) {
       console.log(err);
     }
@@ -99,9 +99,9 @@ async function getChains(contract, provider): Promise<string[]> {
  *
  * @param {ethers.Contract} contract - Ethers contract object
  * @param {string} did - TLS DID
- * @param {string} cert - Public pem certificate
+ * @param {string[][]} chains - Certificate chains
  */
-async function verifyContract(contract: Contract, did: string, cert: string): Promise<boolean> {
+async function verifyContract(contract: Contract, did: string, chains: string[][]): Promise<boolean> {
   const signature = await contract.signature();
   //Check for equal domain in DID and contract
   const didDomain = did.substring(8);
@@ -132,11 +132,11 @@ async function verifyContract(contract: Contract, did: string, cert: string): Pr
   }
 
   //Hash contract values
-  const hash = hashContract(didDomain, contract.address, attributes, expiry);
+  const hash = hashContract(didDomain, contract.address, attributes, expiry, chains);
 
-  //TODO
   //Check for correct signature
-  const valid = verify(cert, signature, hash);
+  //Uses newest cert
+  const valid = verify(chains[0][0], signature, hash);
   return valid;
 }
 

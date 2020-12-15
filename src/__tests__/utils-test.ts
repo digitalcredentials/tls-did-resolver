@@ -43,7 +43,11 @@ describe('Utlis', () => {
       'example.org',
       '0xdC2c16ccC8291c43B83D24E37900A3bed3EEd408',
       [{ path: 'parent/child', value: 'value' }],
-      new Date()
+      new Date(),
+      [
+        [cert, intermidiateCert],
+        [cert, intermidiateCert],
+      ]
     );
     const signature = sign(privKey, hash);
     const valid = verify(cert, signature, hash);

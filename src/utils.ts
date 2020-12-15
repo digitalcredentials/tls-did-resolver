@@ -29,9 +29,16 @@ export function verify(pemCert: string, signature: string, data: string): boolea
  * @param {string} address - TLS DID Contract address
  * @param {Attribute[]} attributes - Additional TLS DID Documents attributes
  * @param {Date} expiry - TLS DID Contract expiry
+ * @param {string[][]} chains - TLS DID Contract certificate chains
  */
-export function hashContract(domain: string, address: string, attributes?: Attribute[], expiry?: Date): string {
-  return hash({ domain, address, attributes, expiry });
+export function hashContract(
+  domain: string,
+  address: string,
+  attributes: Attribute[] = [],
+  expiry: Date = null,
+  chains: string[][] = []
+): string {
+  return hash({ domain, address, attributes, expiry, chains });
 }
 
 /**
