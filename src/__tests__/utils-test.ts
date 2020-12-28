@@ -2,8 +2,7 @@ import { rootCertificates } from 'tls';
 import crypto from 'crypto';
 import { pki } from 'node-forge';
 import { readFileSync } from 'fs';
-import { verify, x509ToJwk, hashContract, addValueAtPath, processChains, checkForOCSPUri, checkOCSP } from '../utils';
-import verificationJwk from './ssl/certs/tls-did-de-jwk.json';
+import { verify, hashContract, addValueAtPath, processChains, checkForOCSPUri, checkOCSP } from '../utils';
 
 const keyPath = '/ssl/private/privKey.pem';
 const certPath = '/ssl/certs/cert.pem';
@@ -52,11 +51,6 @@ describe('Utlis', () => {
     const signature = sign(privKey, hash);
     const valid = verify(cert, signature, hash);
     expect(valid).toBeTruthy();
-  });
-
-  it('should transform x509 certificate to jwk', async () => {
-    const jwk = x509ToJwk(cert);
-    expect(jwk).toEqual(verificationJwk);
   });
 
   it('should add value to object in path', async () => {

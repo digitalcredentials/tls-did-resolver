@@ -1,6 +1,5 @@
 import { pki, asn1 } from 'node-forge';
 import crypto from 'crypto';
-import { JWK, JWKRSAKey } from 'jose';
 import { providers } from 'ethers';
 import hash from 'object-hash';
 import ocsp from 'ocsp';
@@ -39,15 +38,6 @@ export function hashContract(
   chains: string[][] = []
 ): string {
   return hash({ domain, address, attributes, expiry, chains });
-}
-
-/**
- * Transforms x509 pem certificate to JWKRSAKey
- *
- * @param {string} cert
- */
-export function x509ToJwk(cert: string): JWKRSAKey {
-  return <JWKRSAKey>JWK.asKey(cert).toJWK();
 }
 
 /**

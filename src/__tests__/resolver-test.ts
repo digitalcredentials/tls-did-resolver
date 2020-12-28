@@ -20,7 +20,7 @@ describe('Resolver', () => {
     tlsResolver = tls.getResolver(null, c.registryAddress, [rootCert]);
 
     const pemKey = readFileSync(__dirname + c.privKeyPath, 'utf8');
-    tlsDid = new TLSDID(pemKey, c.etherPrivKey, {
+    tlsDid = new TLSDID(c.etherPrivKey, {
       registry: c.registryAddress,
       providerConfig: {
         rpcUrl: c.jsonRpcUrl,
@@ -29,10 +29,10 @@ describe('Resolver', () => {
     await tlsDid.deployContract();
     const random = Math.random().toString(36).substring(7);
 
-    await tlsDid.registerContract(domain);
+    await tlsDid.registerContract(domain, pemKey);
     const chain = [cert, intermediateCert];
-    await tlsDid.registerChain(chain);
-    await tlsDid.setExpiry(new Date('2040/12/12'));
+    await tlsDid.addChain(chain, pemKey);
+    await tlsDid.setExpiry(new Date('2040/12/12'), pemKey);
   });
   it('should resolve did', async () => {
     const didDocument = await tlsResolver.tls(`did:tls:${tlsDid.domain}`, null, null);

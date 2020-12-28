@@ -16,14 +16,14 @@ export const REGISTRY = '0xA725A297b0F81c502df772DBE2D0AEb68788679d';
  * @param {providers.JsonRpcProvider} provider - Ethereum provider
  * @param {string} registryAddress - Address of TLS DID Contract Registry
  *
- * @returns {Promise<{ contract: Contract; jwk: JWKRSAKey }>}
+ * @returns {Promise<Contract>}
  */
 async function resolveContract(
   did: string,
   provider: providers.Provider,
   registryAddress: string,
   rootCertificates: readonly string[]
-): Promise<{ contract: Contract; jwk: JWKRSAKey }> {
+): Promise<Contract> {
   //Setup TLS DID registry
   const registry = new Contract(registryAddress, TLSDIDRegistryContract.abi, provider);
 
@@ -74,8 +74,7 @@ async function resolveContract(
   //If no valid contract was found an error is thrown
   if (validContract) {
     //TODO
-    const jwk = x509ToJwk(validChain[0]);
-    return { contract: validContract, jwk };
+    return validContract;
   } else {
     //TODO Check did-resolver on how to handle errors
     throw new Error(`${addresses.length} contracts were found. None was valid.`);
@@ -157,7 +156,7 @@ async function resolveTlsDid(
   rootCertificates: readonly string[] = nodeRootCertificates
 ): Promise<DIDDocument> {
   const provider = configureProvider(config);
-  const { contract, jwk } = await resolveContract(did, provider, registryAddress, rootCertificates);
+  const contract = await resolveContract(did, provider, registryAddress, rootCertificates);
 
   //Set context and subject
   let didDocument: DIDDocument = {
