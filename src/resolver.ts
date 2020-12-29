@@ -1,10 +1,9 @@
 import { rootCertificates as nodeRootCertificates } from 'tls';
 import { BigNumber, Contract, providers } from 'ethers';
-import { JWKRSAKey } from 'jose';
 import TLSDIDJson from 'tls-did-registry/build/contracts/TLSDID.json';
 import TLSDIDRegistryContract from 'tls-did-registry/build/contracts/TLSDIDRegistry.json';
 import { Attribute, ProviderConfig } from './types';
-import { hashContract, verify, x509ToJwk, addValueAtPath, configureProvider, processChains } from './utils';
+import { hashContract, verify, addValueAtPath, configureProvider, processChains } from './utils';
 import { DIDDocument, DIDResolver } from 'did-resolver';
 
 export const REGISTRY = '0xA725A297b0F81c502df772DBE2D0AEb68788679d';
@@ -42,7 +41,7 @@ async function resolveContract(
     const contract = new Contract(address, TLSDIDJson.abi, provider);
 
     //Retrive tls x509 certs
-    const chains = await getChains(contract, provider);
+    const chains = await getChains(contract);
     if (chains.length === 0) {
       throw new Error('No tls certificates were found.');
     }
@@ -73,7 +72,6 @@ async function resolveContract(
   //tls certification in jwk format
   //If no valid contract was found an error is thrown
   if (validContract) {
-    //TODO
     return validContract;
   } else {
     //TODO Check did-resolver on how to handle errors
@@ -81,7 +79,7 @@ async function resolveContract(
   }
 }
 
-async function getChains(contract, provider): Promise<string[]> {
+async function getChains(contract): Promise<string[]> {
   //Retrive all chains from TLS DID contract
   const chainCountBN: BigNumber = await contract.getChainCount();
   const chainCount = chainCountBN.toNumber();
