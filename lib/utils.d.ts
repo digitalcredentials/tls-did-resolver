@@ -1,5 +1,4 @@
 import { pki } from 'node-forge';
-import { JWKRSAKey } from 'jose';
 import { providers } from 'ethers';
 import { Attribute, ProviderConfig } from './types';
 /**
@@ -20,12 +19,6 @@ export declare function verify(pemCert: string, signature: string, data: string)
  * @param {string[][]} chains - TLS DID Contract certificate chains
  */
 export declare function hashContract(domain: string, address: string, attributes?: Attribute[], expiry?: Date, chains?: string[][]): string;
-/**
- * Transforms x509 pem certificate to JWKRSAKey
- *
- * @param {string} cert
- */
-export declare function x509ToJwk(cert: string): JWKRSAKey;
 /**
  * Adds a value at a path to an object
  *
