@@ -28,7 +28,7 @@ async function resolveContract(
 
   //Retrive all addresses stored in the registry for the did
   const domain = did.substring(8);
-  const addresses = await registry.getContracts(domain);
+  const addresses: string[] = await registry.getContracts(domain);
   if (addresses.length === 0) {
     throw new Error('No contract was found');
   }
@@ -38,6 +38,12 @@ async function resolveContract(
   let validContract: Contract;
   let validChain: string[];
   for (let address of addresses) {
+    if (address == '0x0000000000000000000000000000000000000000') {
+      //DID was deleted
+      continue;
+    }
+
+    //Create contract object from address.
     const contract = new Contract(address, TLSDIDJson.abi, provider);
 
     //Retrive tls x509 certs
@@ -50,7 +56,7 @@ async function resolveContract(
       //No valid chain
       continue;
     }
-    //If multiple chains a present use the newest
+    //If multiple chains a present the newest is used
 
     //Verifies contract with server cert
     let valid;

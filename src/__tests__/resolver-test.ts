@@ -14,36 +14,60 @@ const domain = `tls-did.de`;
 
 describe('Resolver', () => {
   beforeAll(async () => {
+    //Load certs and key
     cert = readFileSync(__dirname + c.certPath, 'utf8');
     intermediateCert = readFileSync(__dirname + c.intermediateCertPath, 'utf8');
     const rootCert = readFileSync(__dirname + c.rootCertPath, 'utf8');
+    const pemKey = readFileSync(__dirname + c.privKeyPath, 'utf8');
+
+    //Instantiate resolver
     tlsResolver = tls.getResolver(null, c.registryAddress, [rootCert]);
 
-    const pemKey = readFileSync(__dirname + c.privKeyPath, 'utf8');
+    //Instantiate tlsDid
     tlsDid = new TLSDID(c.etherPrivKey, {
       registry: c.registryAddress,
       providerConfig: {
         rpcUrl: c.jsonRpcUrl,
       },
     });
-    await tlsDid.deployContract();
-    const random = Math.random().toString(36).substring(7);
 
+    //Deploy & fill tls did smart contract with data
+    await tlsDid.deployContract();
     await tlsDid.registerContract(domain, pemKey);
     const chain = [cert, intermediateCert];
     await tlsDid.addChain(chain, pemKey);
     await tlsDid.setExpiry(new Date('2040/12/12'), pemKey);
   });
+
   it('should resolve did', async () => {
     const didDocument = await tlsResolver.tls(`did:tls:${tlsDid.domain}`, null, null);
-    //TODO improve testing
-    expect(didDocument).toBeTruthy();
+    console.log(didDocument);
+
+    expect(didDocument).toEqual({
+      '@context': 'https://www.w3.org/ns/did/v1',
+      id: 'did:tls:tls-did.de',
+      publicKey: [],
+    });
   });
 
   it('should resolve did with universal resolver', async () => {
     const resolver = new Resolver({ ...tlsResolver });
     const didDocument = await resolver.resolve(`did:tls:${tlsDid.domain}`);
-    //TODO improve testing
-    expect(didDocument).toBeTruthy();
+
+    expect(didDocument).toEqual({
+      '@context': 'https://www.w3.org/ns/did/v1',
+      id: 'did:tls:tls-did.de',
+      publicKey: [],
+    });
+  });
+
+  it('should not resolve did after deletion', async () => {
+    const domain = tlsDid.domain;
+
+    //Delete did
+    await tlsDid.delete();
+
+    //Resolve did
+    await expect(tlsResolver.tls(`did:tls:${domain}`, null, null)).rejects.toThrow();
   });
 });
