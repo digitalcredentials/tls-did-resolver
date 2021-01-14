@@ -41,7 +41,6 @@ describe('Resolver', () => {
 
   it('should resolve did', async () => {
     const didDocument = await tlsResolver.tls(`did:tls:${tlsDid.domain}`, null, null);
-    console.log(didDocument);
 
     expect(didDocument).toEqual({
       '@context': 'https://www.w3.org/ns/did/v1',
@@ -64,10 +63,10 @@ describe('Resolver', () => {
   it('should not resolve did after deletion', async () => {
     const domain = tlsDid.domain;
 
-    //Delete did
+    //Delete DID
     await tlsDid.delete();
 
-    //Resolve did
+    //Resolve DID
     await expect(tlsResolver.tls(`did:tls:${domain}`, null, null)).rejects.toThrow();
   });
 });

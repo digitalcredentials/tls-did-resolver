@@ -1,14 +1,11 @@
-# tls-did-resolver
+# Development
 
-## Instalation
+## Installation
 
 ```
 npm i
 ```
-
-## Development
-
-### Test
+## Test
 
 In tls-did-playground
 
@@ -20,13 +17,14 @@ npm run truffle
 ```
 npm run test
 ```
+## Build
 
-Please notice that repeating the test on the same instance of a ganache test network will lead to a multiple contract error.
-
-### Build
-
-Should be run before commit
+Should be run before each commit.
 
 ```
-npm run buils
+npm run build
 ```
+
+## Documentation
+
+The documentation for the TLS-DID Method and it's libraries can be found in the [tls-did repository](https://github.com/digitalcredentials/tls-did/blob/master/README.md).
