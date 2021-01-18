@@ -12,7 +12,7 @@
     "url": "git+https://github.com/tls-did-project/tls-did-resolver.git"
   },
   "author": "Kilian Käslin",
-  "license": "ISC",
+  "license": "MIT",
   "bugs": {
     "url": "https://github.com/tls-did-project/tls-did-resolver/issues"
   },
