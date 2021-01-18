@@ -1,6 +1,6 @@
 import { readFileSync } from 'fs';
 import tls from '../index';
-import { TLSDID } from 'tls-did';
+import { TLSDID } from '@digitalcredentials/tls-did';
 import { Resolver, DIDResolver } from 'did-resolver';
 import c from './testConfig.json';
 
