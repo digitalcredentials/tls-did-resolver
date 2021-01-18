@@ -1,7 +1,7 @@
 import { rootCertificates as nodeRootCertificates } from 'tls';
 import { BigNumber, Contract, providers } from 'ethers';
-import TLSDIDJson from 'tls-did-registry/build/contracts/TLSDID.json';
-import TLSDIDRegistryContract from 'tls-did-registry/build/contracts/TLSDIDRegistry.json';
+import TLSDIDJson from '@digitalcredentials/tls-did-registry/build/contracts/TLSDID.json';
+import TLSDIDRegistryContract from '@digitalcredentials/tls-did-registry/build/contracts/TLSDIDRegistry.json';
 import { Attribute, ProviderConfig } from './types';
 import { hashContract, verify, addValueAtPath, configureProvider, processChains } from './utils';
 import { DIDDocument, DIDResolver } from 'did-resolver';
