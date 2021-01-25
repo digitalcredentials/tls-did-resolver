@@ -1,5 +1,6 @@
 import { hashContract } from './utils';
-import { REGISTRY, getResolver } from './resolver';
+import { getResolver } from './resolver';
+import { REGISTRY } from './chain';
 declare const _default: {
     getResolver: typeof getResolver;
 };

@@ -5,7 +5,8 @@
   "main": "lib/index.js",
   "scripts": {
     "build": "npx tsc",
-    "test": "jest"
+    "test": "jest",
+    "release": "np"
   },
   "repository": {
     "type": "git",
@@ -30,6 +31,7 @@
     "did-resolver": "^2.1.2",
     "ethers": "^5.0.17",
     "node-forge": "^0.10.0",
+    "np": "^7.2.0",
     "object-hash": "^2.0.3",
     "ocsp": "^1.2.0"
   }

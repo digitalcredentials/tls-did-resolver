@@ -6,10 +6,10 @@ import ocsp from 'ocsp';
 import { Attribute, ProviderConfig } from './types';
 
 /**
- * Verfies if signature is correct
+ * Verifies if signature is correct
  *
  * @param {string} pemCert - public pem certificate
- * @param {string} signature - signature of data signiged with private pem certificate
+ * @param {string} signature - signature of data signed with private pem certificate
  * @param {string} data - data that has been signed
  */
 export function verify(pemCert: string, signature: string, data: string): boolean {
@@ -107,16 +107,16 @@ export function chainToCerts(chain: string): string[] {
 /**
  * Verifies pem cert chains against node's rootCertificates and domain
  * @param {string[]} chain - Array of of aggregated pem certs strings
- * @param {string} domain - Domain the leaf certificat should have as subject
+ * @param {string} domain - Domain the leaf certificate should have as subject
  * @return { chain: string}[] - Array of valid chains
  */
-export async function processChains(
-  chains: string[],
+export async function verifyChains(
+  chains: string[][],
   domain: string,
   rootCertificates: readonly string[]
 ): Promise<string[][]> {
   //Filter duplicate chains
-  const filterdChains = Array.from(new Set(chains));
+  const filteredChains = Array.from(new Set(chains));
 
   //Create caStore from node's rootCertificates
   //TODO Add support for EC certs
@@ -135,10 +135,9 @@ export async function processChains(
 
   //Verify each chain against the caStore and domain
   let verifiedChains = [];
-  for (let chain of filterdChains) {
-    const pemArray = chainToCerts(chain);
-    if (await verifyChain(pemArray, domain, caStore)) {
-      verifiedChains.push(pemArray);
+  for (let chain of filteredChains) {
+    if (await verifyChain(chain, domain, caStore)) {
+      verifiedChains.push(chain);
     }
   }
   return verifiedChains;
@@ -147,7 +146,7 @@ export async function processChains(
 /**
  * Verifies pem cert chains against node's rootCertificates and domain
  * @param {string[]} chain - Array of of aggregated pem certs strings
- * @param {string} domain - Domain the leaf certificat should have as subject
+ * @param {string} domain - Domain the leaf certificate should have as subject
  * @param {pki.CAStore} caStore - Nodes root certificates in a node-forge compliant format
  * @return { chain: string; valid: boolean }[] - Array of objects containing chain and validity
  */
@@ -206,7 +205,7 @@ export async function checkOCSP(cert: string, issuerCert: string): Promise<boole
  * @returns {Promise<boolean>} - True if available
  */
 export function checkForOCSPUri(cert: pki.Certificate): string | null {
-  // Return value type incorect
+  // Return value type incorrect
   const aIAExtension = cert.getExtension('authorityInfoAccess') as { value: string } | null;
   if (aIAExtension === null) {
     return null;

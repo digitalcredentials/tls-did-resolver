@@ -2,16 +2,18 @@ import { rootCertificates } from 'tls';
 import crypto from 'crypto';
 import { pki } from 'node-forge';
 import { readFileSync } from 'fs';
-import { verify, hashContract, addValueAtPath, processChains, checkForOCSPUri, checkOCSP } from '../utils';
+import { verify, hashContract, addValueAtPath, verifyChains, checkForOCSPUri, checkOCSP, chainToCerts } from '../utils';
 
 const keyPath = '/ssl/private/privKey.pem';
 const certPath = '/ssl/certs/cert.pem';
 const certRevokedPath = '/ssl/certs/certRevoked.pem';
-const intermidiateCertPath = '/ssl/certs/intermediateCert.pem';
+const intermediateCertPath = '/ssl/certs/intermediateCert.pem';
+const intermediateRevokedCertPath = '/ssl/certs/intermediateRevokedCert.pem';
 let privKey: string;
 let cert: string;
 let certRevoked: string;
-let intermidiateCert: string;
+let intermediateCert: string;
+let intermediateRevokedCert: string;
 
 //TODO import from tls-did
 function sign(privKey, data) {
@@ -27,7 +29,8 @@ describe('Utlis', () => {
     privKey = readFileSync(__dirname + keyPath, 'utf8');
     cert = readFileSync(__dirname + certPath, 'utf8');
     certRevoked = readFileSync(__dirname + certRevokedPath, 'utf8');
-    intermidiateCert = readFileSync(__dirname + intermidiateCertPath, 'utf8');
+    intermediateCert = readFileSync(__dirname + intermediateCertPath, 'utf8');
+    intermediateRevokedCert = readFileSync(__dirname + intermediateRevokedCertPath, 'utf8');
   });
 
   it('should encrypt and decrypt object with undefined values', async () => {
@@ -44,8 +47,8 @@ describe('Utlis', () => {
       [{ path: 'parent/child', value: 'value' }],
       new Date(),
       [
-        [cert, intermidiateCert],
-        [cert, intermidiateCert],
+        [cert, intermediateCert],
+        [cert, intermediateCert],
       ]
     );
     const signature = sign(privKey, hash);
@@ -93,12 +96,18 @@ describe('Utlis', () => {
     expect(object).toEqual({ array: ['valueA', 'valueB'] });
   });
 
+  it('should split concatenated certs to array', async () => {
+    const concatenatedChain = cert + '\n' + intermediateCert;
+    const chains = await chainToCerts(concatenatedChain);
+    expect(chains).toEqual([cert, intermediateCert]);
+  });
+
   it('should verify pem certificate', async () => {
-    const chain = cert + '\n' + intermidiateCert;
-    const validChains = await processChains([chain], 'tls-did.de', rootCertificates);
+    const chain = [cert, intermediateCert];
+    const validChains = await verifyChains([chain], 'tls-did.de', rootCertificates);
     expect(validChains.length).toEqual(1);
     expect(validChains[0][0]).toEqual(cert);
-    expect(validChains[0][1]).toEqual(intermidiateCert);
+    expect(validChains[0][1]).toEqual(intermediateCert);
   });
 
   it('should check if ocsp is available', async () => {
@@ -108,10 +117,11 @@ describe('Utlis', () => {
   });
 
   it('should verify ocsp status', async () => {
-    const responseA = await checkOCSP(cert, intermidiateCert);
+    const responseA = await checkOCSP(cert, intermediateCert);
     expect(responseA).toBeTruthy();
 
-    const responseB = await checkOCSP(certRevoked, intermidiateCert);
-    expect(responseB).toBeFalsy();
+    // TODO setup current revoked cert
+    // const responseB = await checkOCSP(certRevoked, intermediateRevokedCert);
+    // expect(responseB).toBeFalsy();
   });
 });

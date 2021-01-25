@@ -2,10 +2,10 @@ import { pki } from 'node-forge';
 import { providers } from 'ethers';
 import { Attribute, ProviderConfig } from './types';
 /**
- * Verfies if signature is correct
+ * Verifies if signature is correct
  *
  * @param {string} pemCert - public pem certificate
- * @param {string} signature - signature of data signiged with private pem certificate
+ * @param {string} signature - signature of data signed with private pem certificate
  * @param {string} data - data that has been signed
  */
 export declare function verify(pemCert: string, signature: string, data: string): boolean;
@@ -41,10 +41,10 @@ export declare function chainToCerts(chain: string): string[];
 /**
  * Verifies pem cert chains against node's rootCertificates and domain
  * @param {string[]} chain - Array of of aggregated pem certs strings
- * @param {string} domain - Domain the leaf certificat should have as subject
+ * @param {string} domain - Domain the leaf certificate should have as subject
  * @return { chain: string}[] - Array of valid chains
  */
-export declare function processChains(chains: string[], domain: string, rootCertificates: readonly string[]): Promise<string[][]>;
+export declare function verifyChains(chains: string[][], domain: string, rootCertificates: readonly string[]): Promise<string[][]>;
 /**
  * Checks OCSP
  * @param {string} cert - Website cert in pem format

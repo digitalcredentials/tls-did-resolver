@@ -1,12 +1,9 @@
 import { rootCertificates as nodeRootCertificates } from 'tls';
-import { BigNumber, Contract, providers } from 'ethers';
-import TLSDIDJson from '@digitalcredentials/tls-did-registry/build/contracts/TLSDID.json';
-import TLSDIDRegistryContract from '@digitalcredentials/tls-did-registry/build/contracts/TLSDIDRegistry.json';
+import { Contract } from 'ethers';
 import { Attribute, ProviderConfig } from './types';
-import { hashContract, verify, addValueAtPath, configureProvider, processChains } from './utils';
+import { hashContract, verify, addValueAtPath, configureProvider, verifyChains } from './utils';
 import { DIDDocument, DIDResolver } from 'did-resolver';
-
-export const REGISTRY = '0xA725A297b0F81c502df772DBE2D0AEb68788679d';
+import { getContracts, getAttributes, getChains, getDomain, getExpiry, getSignature, REGISTRY } from './chain';
 
 /**
  * Resolves TLS DID
@@ -17,60 +14,67 @@ export const REGISTRY = '0xA725A297b0F81c502df772DBE2D0AEb68788679d';
  *
  * @returns {Promise<Contract>}
  */
-async function resolveContract(
-  did: string,
-  provider: providers.Provider,
-  registryAddress: string,
+async function processContracts(
+  domain: string,
+  contracts: Contract[],
   rootCertificates: readonly string[]
-): Promise<Contract> {
-  //Setup TLS DID registry
-  const registry = new Contract(registryAddress, TLSDIDRegistryContract.abi, provider);
-
-  //Retrive all addresses stored in the registry for the did
-  const domain = did.substring(8);
-  const addresses: string[] = await registry.getContracts(domain);
-  if (addresses.length === 0) {
-    throw new Error('No contract was found');
-  }
-
+): Promise<Attribute[]> {
   //Iterate over all contracts and verify if contract is valid
   //If multiple contracts are valid an error is thrown
   let validContract: Contract;
   let validChain: string[];
-  for (let address of addresses) {
-    if (address == '0x0000000000000000000000000000000000000000') {
-      //DID was deleted
-      continue;
-    }
-
-    //Create contract object from address.
-    const contract = new Contract(address, TLSDIDJson.abi, provider);
-
-    //Retrive tls x509 certs
+  let validAttributes: Attribute[];
+  for (let contract of contracts) {
+    //Retrieve tls x509 certs
     const chains = await getChains(contract);
     if (chains.length === 0) {
       throw new Error('No tls certificates were found.');
     }
-    const validChains = await processChains(chains, domain, rootCertificates);
+    const validChains = await verifyChains(chains, domain, rootCertificates);
     if (validChains.length === 0) {
       //No valid chain
       continue;
     }
-    //If multiple chains a present the newest is used
+    //If multiple chains are present the newest is used
 
-    //Verifies contract with server cert
-    let valid;
-    try {
-      valid = await verifyContract(contract, did, validChains);
-    } catch (err) {
-      console.log(err);
+    //Check for equal domain in DID and contract
+    const contractDomain = await getDomain(contract);
+    if (domain !== contractDomain) {
+      //DID domain and contract domain to not match
+      continue;
+    }
+
+    //Retrieve expiry from contract and check if expired
+    const expiry = await getExpiry(contract);
+    const now = new Date();
+    if (expiry && expiry < now) {
+      //Contract expired
+      continue;
+    }
+
+    //Retrieve all attributes from the contract
+    const attributes = await getAttributes(contract);
+
+    //Retrieve signature from the contract
+    const signature = await getSignature(contract);
+
+    //Hash contract values
+    const hash = hashContract(domain, contract.address, attributes, expiry, chains);
+
+    //Check for correct signature
+    //Uses newest cert
+    const valid = verify(chains[0][0], signature, hash);
+    if (!valid) {
+      //Signatures does not match data
+      continue;
     }
 
     if (valid && !validContract) {
       validContract = contract;
       validChain = validChains[0];
+      validAttributes = attributes;
     } else if (valid) {
-      throw new Error(`${addresses.length} contracts were found. Multiple were valid.`);
+      throw new Error(`${contracts.length} contracts were found. Multiple were valid.`);
     }
   }
 
@@ -78,70 +82,33 @@ async function resolveContract(
   //tls certification in jwk format
   //If no valid contract was found an error is thrown
   if (validContract) {
-    return validContract;
+    return validAttributes;
   } else {
     //TODO Check did-resolver on how to handle errors
-    throw new Error(`${addresses.length} contracts were found. None was valid.`);
+    throw new Error(`${contracts.length} contracts were found. None was valid.`);
   }
-}
-
-async function getChains(contract): Promise<string[]> {
-  //Retrive all chains from TLS DID contract
-  const chainCountBN: BigNumber = await contract.getChainCount();
-  const chainCount = chainCountBN.toNumber();
-  let chains = [];
-  for (let i = 0; i < chainCount; i++) {
-    const cert = await contract.getChain(i);
-    chains.push(cert);
-  }
-
-  return chains;
 }
 
 /**
- * Verifies if TLS DID Contract signature is correct
+ * Builds DID document
  *
- * @param {ethers.Contract} contract - Ethers contract object
  * @param {string} did - TLS DID
- * @param {string[][]} chains - Certificate chains
+ * @param {Attribute []} attributes - The attributes of the DID document
+ *
+ * @returns {DIDDocument}
  */
-async function verifyContract(contract: Contract, did: string, chains: string[][]): Promise<boolean> {
-  const signature = await contract.signature();
-  //Check for equal domain in DID and contract
-  const didDomain = did.substring(8);
-  const contractDomain = await contract.domain();
-  if (didDomain !== contractDomain) {
-    throw new Error('DID identifier does not match contract domain');
-  }
+function buildDIDDocument(did: string, attributes: Attribute[]): DIDDocument {
+  //Set context and subject
+  let didDocument: DIDDocument = {
+    '@context': 'https://www.w3.org/ns/did/v1',
+    id: did,
+    publicKey: [],
+  };
 
-  //Retrive all attributes from the contract
-  let attributes: Attribute[] = [];
-  let attributeCountBN: BigNumber;
-  attributeCountBN = await contract.getAttributeCount();
-  const attributeCount = attributeCountBN.toNumber();
-  for (let i = 0; i < attributeCount; i++) {
-    const attribute = await contract.getAttribute(i);
-    const path = attribute['0'];
-    const value = attribute['1'];
-    attributes.push({ path, value });
-  }
+  //Set attributes by appending attribute values to the DID Document object
+  attributes.forEach((attribute) => addValueAtPath(didDocument, attribute.path, attribute.value));
 
-  //Retrive expiry from contract and check if expired
-  let expiryBN: BigNumber;
-  expiryBN = await contract.expiry();
-  const expiry = new Date(expiryBN.toNumber());
-  const now = new Date();
-  if (expiry && expiry < now) {
-    throw new Error('Contract expired');
-  }
-
-  //Hash contract values
-  const hash = hashContract(didDomain, contract.address, attributes, expiry, chains);
-
-  //Check for correct signature
-  //Uses newest cert
-  const valid = verify(chains[0][0], signature, hash);
-  return valid;
+  return didDocument;
 }
 
 /**
@@ -160,24 +127,15 @@ async function resolveTlsDid(
   rootCertificates: readonly string[] = nodeRootCertificates
 ): Promise<DIDDocument> {
   const provider = configureProvider(config);
-  const contract = await resolveContract(did, provider, registryAddress, rootCertificates);
-
-  //Set context and subject
-  let didDocument: DIDDocument = {
-    '@context': 'https://www.w3.org/ns/did/v1',
-    id: did,
-    publicKey: [],
-  };
-
-  //Set attributes by appending attribute values to the DID Document object
-  const attributeCount = await contract.getAttributeCount();
-  for (let i = 0; i < attributeCount; i++) {
-    const attribute = await contract.getAttribute(i);
-    const path = attribute['0'];
-    const value = attribute['1'];
-    addValueAtPath(didDocument, path, value);
+  const domain = did.substring(8);
+  const contracts = await getContracts(domain, provider, registryAddress);
+  if (contracts.length === 0) {
+    throw new Error('No contract was found');
   }
-  return didDocument;
+
+  const attributes = await processContracts(domain, contracts, rootCertificates);
+
+  return buildDIDDocument(did, attributes);
 }
 
 /**
