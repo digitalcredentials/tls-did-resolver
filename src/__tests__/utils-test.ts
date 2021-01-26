@@ -66,7 +66,7 @@ describe('Utlis', () => {
 
   it('should add value to object in path with array', async () => {
     let object = {};
-    const path = 'parent[]/child';
+    const path = 'parent[0]/child';
     const value = 'value';
     addValueAtPath(object, path, value);
     expect(object).toEqual({ parent: [{ child: 'value' }] });
@@ -74,7 +74,7 @@ describe('Utlis', () => {
 
   it('should add value to object in path with existing array', async () => {
     let object = { parent: [{ childA: 'valueA' }] };
-    const path = 'parent[]/childB';
+    const path = 'parent[1]/childB';
     const value = 'valueB';
     addValueAtPath(object, path, value);
     expect(object).toEqual({ parent: [{ childA: 'valueA' }, { childB: 'valueB' }] });
@@ -82,7 +82,7 @@ describe('Utlis', () => {
 
   it('should add value to array in path', async () => {
     let object = {};
-    const path = 'array[]';
+    const path = 'array[0]';
     const value = 'valueA';
     addValueAtPath(object, path, value);
     expect(object).toEqual({ array: ['valueA'] });
@@ -90,10 +90,18 @@ describe('Utlis', () => {
 
   it('should add value to array in path with existing array', async () => {
     let object = { array: ['valueA'] };
-    const path = 'array[]';
+    const path = 'array[1]';
     const value = 'valueB';
     addValueAtPath(object, path, value);
     expect(object).toEqual({ array: ['valueA', 'valueB'] });
+  });
+
+  it('should add value to object in existing array', async () => {
+    let object = { array: [{ keyA: 'valueA' }] };
+    const path = 'array[0]/keyB';
+    const value = 'valueB';
+    addValueAtPath(object, path, value);
+    expect(object).toEqual({ array: [{ keyA: 'valueA', keyB: 'valueB' }] });
   });
 
   it('should split concatenated certs to array', async () => {
