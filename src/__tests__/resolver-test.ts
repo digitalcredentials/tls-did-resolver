@@ -7,19 +7,16 @@ import c from './testConfig.json';
 let tlsResolver: { [index: string]: DIDResolver };
 let tlsDid: TLSDID;
 
-let cert: string;
-let intermediateCert: string;
+//Load certs and key
+const cert = readFileSync(__dirname + c.certPath, 'utf8');
+const intermediateCert = readFileSync(__dirname + c.intermediateCertPath, 'utf8');
+const rootCert = readFileSync(__dirname + c.rootCertPath, 'utf8');
+const pemKey = readFileSync(__dirname + c.privKeyPath, 'utf8');
 
 const domain = `tls-did.de`;
 
-describe('Resolver', () => {
+describe('Resolver: Valid contracts', () => {
   beforeAll(async () => {
-    //Load certs and key
-    cert = readFileSync(__dirname + c.certPath, 'utf8');
-    intermediateCert = readFileSync(__dirname + c.intermediateCertPath, 'utf8');
-    const rootCert = readFileSync(__dirname + c.rootCertPath, 'utf8');
-    const pemKey = readFileSync(__dirname + c.privKeyPath, 'utf8');
-
     //Instantiate resolver
     tlsResolver = tls.getResolver(null, c.registryAddress, [rootCert]);
 
@@ -36,7 +33,7 @@ describe('Resolver', () => {
     await tlsDid.registerContract(domain, pemKey);
     const chain = [cert, intermediateCert];
     await tlsDid.addChain(chain, pemKey);
-    await tlsDid.setExpiry(new Date('2040/12/12'), pemKey);
+    await tlsDid.setExpiry(new Date('2100/12/12'), pemKey);
   });
 
   it('should resolve did', async () => {
@@ -65,6 +62,46 @@ describe('Resolver', () => {
 
     //Delete DID
     await tlsDid.delete();
+
+    //Resolve DID
+    await expect(tlsResolver.tls(`did:tls:${domain}`, null, null)).rejects.toThrow();
+  });
+
+  afterAll(() => {
+    tlsDid = null;
+  });
+});
+
+describe('Resolver: Invalid contracts', () => {
+  beforeAll(async () => {
+    //Instantiate tlsDid
+    tlsDid = new TLSDID(c.etherPrivKey, {
+      registry: c.registryAddress,
+      providerConfig: {
+        rpcUrl: c.jsonRpcUrl,
+      },
+    });
+  });
+
+  it('should not resolve unregistered TLS-DID contract', async () => {
+    await tlsDid.deployContract();
+
+    //Resolve DID
+    await expect(tlsResolver.tls(`did:tls:${domain}`, null, null)).rejects.toThrow();
+  });
+
+  it('should not resolve TLS-DID contract without chain', async () => {
+    await tlsDid.registerContract(domain, pemKey);
+
+    //Resolve DID
+    await expect(tlsResolver.tls(`did:tls:${domain}`, null, null)).rejects.toThrow();
+  });
+
+  it('should not resolve TLS-DID contract with expiry < today', async () => {
+    //Add chain and expiry < today
+    const chain = [cert, intermediateCert];
+    await tlsDid.addChain(chain, pemKey);
+    await tlsDid.setExpiry(new Date('1999/12/12'), pemKey);
 
     //Resolve DID
     await expect(tlsResolver.tls(`did:tls:${domain}`, null, null)).rejects.toThrow();

@@ -28,7 +28,8 @@ async function processContracts(
     //Retrieve tls x509 certs
     const chains = await getChains(contract);
     if (chains.length === 0) {
-      throw new Error('No tls certificates were found.');
+      //No chain
+      continue;
     }
     const validChains = await verifyChains(chains, domain, rootCertificates);
     if (validChains.length === 0) {
