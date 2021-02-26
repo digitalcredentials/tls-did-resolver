@@ -64,7 +64,7 @@ describe('Resolver: Valid contracts', () => {
     await tlsDid.delete();
 
     //Resolve DID
-    await expect(tlsResolver.tls(`did:tls:${domain}`, null, null)).rejects.toThrow();
+    await expect(tlsResolver.tls(`did:tls:${domain}`, null, null)).rejects.toThrow('No contract was found');
   });
 
   afterAll(() => {
@@ -87,14 +87,14 @@ describe('Resolver: Invalid contracts', () => {
     await tlsDid.deployContract();
 
     //Resolve DID
-    await expect(tlsResolver.tls(`did:tls:${domain}`, null, null)).rejects.toThrow();
+    await expect(tlsResolver.tls(`did:tls:${domain}`, null, null)).rejects.toThrow('No contract was found');
   });
 
   it('should not resolve TLS-DID contract without chain', async () => {
     await tlsDid.registerContract(domain, pemKey);
 
     //Resolve DID
-    await expect(tlsResolver.tls(`did:tls:${domain}`, null, null)).rejects.toThrow();
+    await expect(tlsResolver.tls(`did:tls:${domain}`, null, null)).rejects.toThrow('1 contracts were found. None was valid.');
   });
 
   it('should not resolve TLS-DID contract with expiry < today', async () => {
@@ -104,6 +104,11 @@ describe('Resolver: Invalid contracts', () => {
     await tlsDid.setExpiry(new Date('1999/12/12'), pemKey);
 
     //Resolve DID
-    await expect(tlsResolver.tls(`did:tls:${domain}`, null, null)).rejects.toThrow();
+    await expect(tlsResolver.tls(`did:tls:${domain}`, null, null)).rejects.toThrow('1 contracts were found. None was valid.');
+  });
+
+  afterAll(async () => {
+    await tlsDid.delete();
+    tlsDid = null;
   });
 });

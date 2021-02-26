@@ -16,7 +16,6 @@ const NULL_ADDRESS = '0x0000000000000000000000000000000000000000';
  *
  * @returns {Promise<Contract>}
  */
-
 export async function getContracts(domain: string, provider: providers.Provider, registryAddress: string): Promise<Contract[]> {
   //Setup TLS DID registry
   const registry = new Contract(registryAddress, TLSDIDRegistryContract.abi, provider);
