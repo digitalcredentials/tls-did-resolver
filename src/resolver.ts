@@ -85,7 +85,6 @@ async function processContracts(
   if (validContract) {
     return validAttributes;
   } else {
-    //TODO Check did-resolver on how to handle errors
     throw new Error(`${contracts.length} contracts were found. None was valid.`);
   }
 }

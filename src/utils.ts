@@ -120,7 +120,7 @@ export async function verifyChains(
   const filteredChains = Array.from(new Set(chains));
 
   //Create caStore from node's rootCertificates
-  //TODO Add support for EC certs
+  //TODO Add support for EC certs (https://github.com/digitalcredentials/tls-did/issues/27)
   console.log('No Support for EC root certs');
   let unsupportedRootCertIdxs = [];
   const pkis = rootCertificates.map((cert, idx) => {
@@ -162,14 +162,12 @@ async function verifyChain(chain: string[], domain: string, caStore: pki.CAStore
 }
 
 /**
- * Verifies that the subject of a x509 certificate
+ * Verifies the subject of a x509 certificate
  * @param {string} cert - Website cert in pem format
  * @param {string} subject
  */
 function verifyCertSubject(cert: string, subject: string): boolean {
   const pkiObject = pki.certificateFromPem(cert);
-  //TODO unclear if multiple subjects can be present in x509 leaf certificate
-  //https://www.tools.ietf.org/html/rfc5280#section-4.1.2.6
   return pkiObject.subject?.attributes[0]?.value === subject;
 }
 
