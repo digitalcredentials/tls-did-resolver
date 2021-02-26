@@ -128,8 +128,7 @@ describe('Utlis', () => {
     const responseA = await checkOCSP(cert, intermediateCert);
     expect(responseA).toBeTruthy();
 
-    // TODO setup current revoked cert
-    // const responseB = await checkOCSP(certRevoked, intermediateRevokedCert);
-    // expect(responseB).toBeFalsy();
+    const responseB = await checkOCSP(certRevoked, intermediateRevokedCert);
+    expect(responseB).toBeFalsy();
   });
 });

@@ -186,7 +186,7 @@ export async function checkOCSP(cert: string, issuerCert: string): Promise<boole
         issuer: issuerCert,
       },
       function (err, res) {
-        if (!res) reject(err);
+        if (!res) resolve(false);
         else {
           const valid = res.type === 'good';
           resolve(valid);

@@ -2,7 +2,7 @@ import { rootCertificates as nodeRootCertificates } from 'tls';
 import { Contract } from 'ethers';
 import { Attribute, ProviderConfig } from './types';
 import { hashContract, verify, addValueAtPath, configureProvider, verifyChains } from './utils';
-import { DIDDocument, DIDResolver } from 'did-resolver';
+import { DIDDocument, DIDResolver, ParsedDID, parse } from 'did-resolver';
 import { getContracts, getAttributes, getChains, getDomain, getExpiry, getSignature, REGISTRY } from './chain';
 
 /**
@@ -122,12 +122,13 @@ function buildDIDDocument(did: string, attributes: Attribute[]): DIDDocument {
  */
 async function resolveTlsDid(
   did: string,
+  parsed: ParsedDID,
   config: ProviderConfig = {},
   registryAddress: string = REGISTRY,
   rootCertificates: readonly string[] = nodeRootCertificates
 ): Promise<DIDDocument> {
   const provider = configureProvider(config);
-  const domain = did.substring(8);
+  const domain = parsed.id;
   const contracts = await getContracts(domain, provider, registryAddress);
   if (contracts.length === 0) {
     throw new Error('No contract was found');
@@ -151,8 +152,8 @@ export function getResolver(
   registryAddress?: string,
   rootCertificates?: string[]
 ): { [index: string]: DIDResolver } {
-  async function resolve(did: string): Promise<DIDDocument> {
-    return await resolveTlsDid(did, config, registryAddress, rootCertificates);
+  async function resolve(did: string, parsed: ParsedDID): Promise<DIDDocument> {
+    return await resolveTlsDid(did, parsed ? parsed : parse(did), config, registryAddress, rootCertificates);
   }
   return { tls: resolve };
 }
