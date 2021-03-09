@@ -2,7 +2,16 @@ import { rootCertificates } from 'tls';
 import crypto from 'crypto';
 import { pki } from 'node-forge';
 import { readFileSync } from 'fs';
-import { verify, hashContract, addValueAtPath, verifyChains, checkForOCSPUri, checkOCSP, chainToCerts } from '../utils';
+import {
+  verify,
+  hashContract,
+  addValueAtPath,
+  verifyChains,
+  checkForOCSPUri,
+  checkOCSP,
+  chainToCerts,
+  createCaStore,
+} from '../utils';
 
 const keyPath = '/ssl/private/privKey.pem';
 const certPath = '/ssl/certs/cert.pem';
@@ -24,7 +33,7 @@ function sign(privKey, data) {
   return signature;
 }
 
-describe('Utlis', () => {
+describe('Utils', () => {
   beforeAll(() => {
     privKey = readFileSync(__dirname + keyPath, 'utf8');
     cert = readFileSync(__dirname + certPath, 'utf8');
@@ -112,7 +121,8 @@ describe('Utlis', () => {
 
   it('should verify pem certificate', async () => {
     const chain = [cert, intermediateCert];
-    const validChains = await verifyChains([chain], 'tls-did.de', rootCertificates);
+    const caStore = createCaStore(rootCertificates);
+    const validChains = await verifyChains([chain], 'tls-did.de', caStore);
     expect(validChains.length).toEqual(1);
     expect(validChains[0][0]).toEqual(cert);
     expect(validChains[0][1]).toEqual(intermediateCert);

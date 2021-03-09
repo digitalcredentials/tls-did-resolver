@@ -1,7 +1,7 @@
 import { rootCertificates as nodeRootCertificates } from 'tls';
 import { Contract } from 'ethers';
 import { Attribute, ProviderConfig } from './types';
-import { hashContract, verify, addValueAtPath, configureProvider, verifyChains } from './utils';
+import { hashContract, verify, addValueAtPath, configureProvider, verifyChains, createCaStore } from './utils';
 import { DIDDocument, DIDResolver, ParsedDID, parse } from 'did-resolver';
 import { getContracts, getAttributes, getChains, getDomain, getExpiry, getSignature, REGISTRY } from './chain';
 
@@ -19,6 +19,9 @@ async function processContracts(
   contracts: Contract[],
   rootCertificates: readonly string[]
 ): Promise<Attribute[]> {
+  //Create node-forge CA certificate store
+  const caStore = createCaStore(rootCertificates);
+
   //Iterate over all contracts and verify if contract is valid
   //If multiple contracts are valid an error is thrown
   let validContract: Contract;
@@ -31,7 +34,8 @@ async function processContracts(
       //No chain
       continue;
     }
-    const validChains = await verifyChains(chains, domain, rootCertificates);
+    //Verify chains against CA certificate store and domain
+    const validChains = await verifyChains(chains, domain, caStore);
     if (validChains.length === 0) {
       //No valid chain
       continue;

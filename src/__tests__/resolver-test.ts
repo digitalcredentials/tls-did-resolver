@@ -6,6 +6,7 @@ import c from './testConfig.json';
 
 let tlsResolver: { [index: string]: DIDResolver };
 let tlsDid: TLSDID;
+let tlsDids: TLSDID[] = [];
 
 //Load certs and key
 const cert = readFileSync(__dirname + c.certPath, 'utf8');

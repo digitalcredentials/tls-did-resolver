@@ -39,12 +39,19 @@ export declare function configureProvider(conf?: ProviderConfig): providers.Prov
  */
 export declare function chainToCerts(chain: string): string[];
 /**
- * Verifies pem cert chains against node's rootCertificates and domain
+ * Creates node-forge CA certificate store from an string array of CA certificates
+ * @param {string[]} rootCertificates - Array of of aggregated pem certs strings
+ * @return {pki.CAStore} - node-forge CA certificate store
+ */
+export declare function createCaStore(rootCertificates: readonly string[]): pki.CAStore;
+/**
+ * Verifies pem cert chains against node-forge CA certificate store and a domain
  * @param {string[]} chain - Array of of aggregated pem certs strings
  * @param {string} domain - Domain the leaf certificate should have as subject
- * @return { chain: string}[] - Array of valid chains
+ * @param {pki.CAStore} caStore - node-forge CA certificate store
+ * @return {string[]} - Array of valid chains
  */
-export declare function verifyChains(chains: string[][], domain: string, rootCertificates: readonly string[]): Promise<string[][]>;
+export declare function verifyChains(chains: string[][], domain: string, caStore: pki.CAStore): Promise<string[][]>;
 /**
  * Checks OCSP
  * @param {string} cert - Website cert in pem format

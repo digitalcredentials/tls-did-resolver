@@ -106,19 +106,11 @@ export function chainToCerts(chain: string): string[] {
 }
 
 /**
- * Verifies pem cert chains against node's rootCertificates and domain
- * @param {string[]} chain - Array of of aggregated pem certs strings
- * @param {string} domain - Domain the leaf certificate should have as subject
- * @return { chain: string}[] - Array of valid chains
+ * Creates node-forge CA certificate store from an string array of CA certificates
+ * @param {string[]} rootCertificates - Array of of aggregated pem certs strings
+ * @return {pki.CAStore} - node-forge CA certificate store
  */
-export async function verifyChains(
-  chains: string[][],
-  domain: string,
-  rootCertificates: readonly string[]
-): Promise<string[][]> {
-  //Filter duplicate chains
-  const filteredChains = Array.from(new Set(chains));
-
+export function createCaStore(rootCertificates: readonly string[]): pki.CAStore {
   //Create caStore from node's rootCertificates
   //TODO Add support for EC certs (https://github.com/digitalcredentials/tls-did/issues/27)
   console.log('No Support for EC root certs');
@@ -132,7 +124,19 @@ export async function verifyChains(
   });
   console.log('unsupportedRootCertIdxs', unsupportedRootCertIdxs);
   const definedPkis = pkis.filter((pki) => pki !== undefined);
-  const caStore = pki.createCaStore(definedPkis);
+  return pki.createCaStore(definedPkis);
+}
+
+/**
+ * Verifies pem cert chains against node-forge CA certificate store and a domain
+ * @param {string[]} chain - Array of of aggregated pem certs strings
+ * @param {string} domain - Domain the leaf certificate should have as subject
+ * @param {pki.CAStore} caStore - node-forge CA certificate store
+ * @return {string[]} - Array of valid chains
+ */
+export async function verifyChains(chains: string[][], domain: string, caStore: pki.CAStore): Promise<string[][]> {
+  //Filter duplicate chains
+  const filteredChains = Array.from(new Set(chains));
 
   //Verify each chain against the caStore and domain
   let verifiedChains = [];
