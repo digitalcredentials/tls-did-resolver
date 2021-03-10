@@ -149,11 +149,17 @@ export async function verifyChains(chains: string[][], domain: string, caStore: 
 }
 
 /**
+ * @typedef {Object} Chain
+ * @property {chain} string - The chain
+ * @property {boolean} valid - The chain's validity
+ */
+
+/**
  * Verifies pem cert chains against node's rootCertificates and domain
  * @param {string[]} chain - Array of of aggregated pem certs strings
  * @param {string} domain - Domain the leaf certificate should have as subject
  * @param {pki.CAStore} caStore - Nodes root certificates in a node-forge compliant format
- * @return { chain: string; valid: boolean }[] - Array of objects containing chain and validity
+ * @return {Chain}[] - Array of objects containing chain and validity
  */
 async function verifyChain(chain: string[], domain: string, caStore: pki.CAStore): Promise<{ valid: boolean }> {
   const certificateArray = chain.map((pem) => pki.certificateFromPem(pem));
