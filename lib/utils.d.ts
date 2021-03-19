@@ -1,24 +1,4 @@
 import { pki } from 'node-forge';
-import { providers } from 'ethers';
-import { Attribute, ProviderConfig } from './types';
-/**
- * Verifies if signature is correct
- *
- * @param {string} pemCert - public pem certificate
- * @param {string} signature - signature of data signed with private pem certificate
- * @param {string} data - data that has been signed
- */
-export declare function verify(pemCert: string, signature: string, data: string): boolean;
-/**
- * Hashes a TLS DID Contract
- *
- * @param {string} domain - TLS DID domain
- * @param {string} address - TLS DID Contract address
- * @param {Attribute[]} attributes - Additional TLS DID Documents attributes
- * @param {Date} expiry - TLS DID Contract expiry
- * @param {string[][]} chains - TLS DID Contract certificate chains
- */
-export declare function hashContract(domain: string, address: string, attributes?: Attribute[], expiry?: Date, chains?: string[][]): string;
 /**
  * Adds a value at a path to an object
  *
@@ -27,11 +7,6 @@ export declare function hashContract(domain: string, address: string, attributes
  * @param {string} value - Value stored in path
  */
 export declare function addValueAtPath(object: object, path: string, value: any): void;
-/**
- * Returns the configured provider
- * @param {ProviderConfig} conf - Configuration for provider
- */
-export declare function configureProvider(conf?: ProviderConfig): providers.Provider;
 /**
  * Splits string of pem keys to array of pem keys
  * @param {string} chain - String of aggregated pem certs
@@ -52,6 +27,21 @@ export declare function createCaStore(rootCertificates: readonly string[]): pki.
  * @return {string[]} - Array of valid chains
  */
 export declare function verifyChains(chains: string[][], domain: string, caStore: pki.CAStore): Promise<string[][]>;
+/**
+ * @typedef {Object} Chain
+ * @property {chain} string - The chain
+ * @property {boolean} valid - The chain's validity
+ */
+/**
+ * Verifies pem cert chains against node's rootCertificates and domain
+ * @param {string[]} chain - Array of of aggregated pem certs strings
+ * @param {string} domain - Domain the leaf certificate should have as subject
+ * @param {pki.CAStore} caStore - Nodes root certificates in a node-forge compliant format
+ * @return {Chain}[] - Array of objects containing chain and validity
+ */
+export declare function verifyChain(chain: string[], domain: string, caStore: pki.CAStore): Promise<{
+    valid: boolean;
+}>;
 /**
  * Checks OCSP
  * @param {string} cert - Website cert in pem format

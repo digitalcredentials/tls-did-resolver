@@ -1,4 +1,4 @@
-import { ProviderConfig } from './types';
+import { ProviderConfig } from '@digitalcredentials/tls-did-utils';
 import { DIDResolver } from 'did-resolver';
 /**
  * Gets TLS DID Resolver

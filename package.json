@@ -6,7 +6,8 @@
   "scripts": {
     "build": "npx tsc",
     "test": "jest",
-    "release": "npm run build & np"
+    "release": "npm run build & np",
+    "reload": "rm -rf node_modules && rm package-lock.json && npm i"
   },
   "repository": {
     "type": "git",
@@ -19,7 +20,7 @@
   },
   "homepage": "https://github.com/tls-did-project/tls-did-resolver#readme",
   "devDependencies": {
-    "@digitalcredentials/tls-did": "^0.1.0",
+    "@digitalcredentials/tls-did": "github:tls-did-project/tls-did#feature/eventDirven",
     "@types/jest": "^26.0.14",
     "@types/node-forge": "^0.9.5",
     "jest": "^26.6.0",
@@ -28,7 +29,8 @@
     "typescript": "^4.0.3"
   },
   "dependencies": {
-    "@digitalcredentials/tls-did-registry": "^0.1.1",
+    "@digitalcredentials/tls-did-registry": "github:tls-did-project/tls-did-registry#feature/eventDrivenRegistry",
+    "@digitalcredentials/tls-did-utils": "github:digitalcredentials/tls-did-utils#master",
     "did-resolver": "^2.1.2",
     "ethers": "^5.0.17",
     "node-forge": "^0.10.0",

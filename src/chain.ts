@@ -1,110 +1,68 @@
-import { BigNumber, Contract, providers } from 'ethers';
-import TLSDIDJson from '@digitalcredentials/tls-did-registry/build/contracts/TLSDID.json';
+import { Contract, providers, EventFilter, Event } from 'ethers';
+import { hexZeroPad } from 'ethers/lib/utils';
 import TLSDIDRegistryContract from '@digitalcredentials/tls-did-registry/build/contracts/TLSDIDRegistry.json';
-import { chainToCerts } from './utils';
-import { Attribute } from './types';
 
-export const REGISTRY = '0xA725A297b0F81c502df772DBE2D0AEb68788679d';
-const NULL_ADDRESS = '0x0000000000000000000000000000000000000000';
-
-/**
- * Gets all TLSDIDContracts associated with a TLS-DID as ethers contract objects
- *
- * @param {string} did - TLS DID
- * @param {providers.JsonRpcProvider} provider - Ethereum provider
- * @param {string} registryAddress - Address of TLS DID Contract Registry
- *
- * @returns {Promise<Contract>}
- */
-export async function getContracts(domain: string, provider: providers.Provider, registryAddress: string): Promise<Contract[]> {
+export async function newRegistry(provider: providers.Provider, registryAddress: string): Promise<Contract> {
   //Setup TLS DID registry
   const registry = new Contract(registryAddress, TLSDIDRegistryContract.abi, provider);
+  return registry;
+}
 
-  //Retrieve all addresses stored in the registry for the did
-  const addresses: string[] = await registry.getContracts(domain);
-
-  //Create contract objects from addresses
-  let contracts = [];
-  for (let address of addresses) {
-    if (address == NULL_ADDRESS) {
-      //DID was deleted
-      continue;
-    }
-
-    //Create contract object from address.
-    contracts.push(new Contract(address, TLSDIDJson.abi, provider));
+export async function getClaimants(registry: Contract, domain: string) {
+  if (domain?.length === 0) {
+    throw new Error('No domain provided');
+  }
+  const claimantsCountBN = await registry.getClaimantsCount(domain);
+  const claimantsCount = claimantsCountBN.toNumber();
+  if (claimantsCount === 0) {
+    throw new Error(`No claims to did:tls:${domain} contracts were found.`);
   }
 
-  return contracts;
+  const claimants = await Promise.all(
+    Array.from(Array(claimantsCount).keys()).map((i) => registry.claimantsRegistry(domain, i))
+  );
+  const uniqClaimants = Array.from(new Set(claimants));
+
+  return uniqClaimants;
 }
 
-/**
- * Gets domain from contract
- * @param {Contract} contract - Ethers TLSDID contract object
- *
- * @returns {Promise<String>} - Domain
- */
-export async function getDomain(contract): Promise<String> {
-  return await contract.domain();
+export async function resolveClaimant(registry: Contract, domain: string, address: string): Promise<Event[]> {
+  const lastChangeBlockBN = await registry.changeRegistry(address, domain);
+  const lastChangeBlock = lastChangeBlockBN.toNumber();
+  if (lastChangeBlock === 0) {
+    return [];
+  }
+
+  let filters = [
+    registry.filters.ExpiryChanged(),
+    registry.filters.SignatureChanged(),
+    registry.filters.AttributeChanged(),
+    registry.filters.ChainChanged(),
+  ];
+  filters.forEach((filter) => filter.topics.push(hexZeroPad(address, 32)));
+
+  return await queryChain(registry, filters, lastChangeBlock);
 }
 
-/**
- * Gets expiry from contract
- * @param {Contract} contract - Ethers TLSDID contract object
- *
- * @returns {Promise<Date>} - Expiry
- */
-export async function getExpiry(contract): Promise<Date> {
-  const expiryBN: BigNumber = await contract.expiry();
-  return new Date(expiryBN.toNumber());
+async function queryChain(registry, filters: EventFilter[], block: number): Promise<Event[]> {
+  //TODO This could be more efficient, the ethers library only correctly decodes events if event type is present in event filter
+  //The block with the last change is search for all types of changed events
+  let events = await queryBlock(registry, filters, block);
+  if (events.length === 0) {
+    throw new Error(`No event found in block: ${block}`);
+  }
+
+  // TODO is the event array sorted by creation time
+  const previousChangeBlockBN = events[events.length - 1].args.previousChange;
+  const previousChangeBlock = previousChangeBlockBN.toNumber();
+  if (previousChangeBlock > 0) {
+    events.push(...(await queryChain(registry, filters, previousChangeBlock)));
+  }
+
+  return events;
 }
 
-/**
- * Gets attributes from contract
- * @param {Contract} contract - Ethers TLSDID contract object
- *
- * @returns {Promise<Attribute[]>} - Attribute Array
- */
-export async function getAttributes(contract): Promise<Attribute[]> {
-  const attributeCountBN = await contract.getAttributeCount();
-  const attributeCount = attributeCountBN.toNumber();
-
-  //Creates and waits for an array of promises each containing an getAttribute call
-  const attributesStrings = await Promise.all(Array.from(Array(attributeCount).keys()).map((i) => contract.getAttribute(i)));
-
-  //Transforms array representation of attributes to object representation
-  let attributes = [];
-  attributesStrings.forEach((attribute) => {
-    const path = attribute['0'];
-    const value = attribute['1'];
-    attributes.push({ path, value });
-  });
-  return attributes;
-}
-
-/**
- * Gets chains from contract
- * @param {Contract} contract - Ethers TLSDID contract object
- *
- * @returns {Promise<string[][]>} - Array of chain arrays
- */
-export async function getChains(contract): Promise<string[][]> {
-  const chainCountBN = await contract.getChainCount();
-  const chainCount = chainCountBN.toNumber();
-
-  //Creates and waits for an array of promises each containing an getChain call
-  const chains = await Promise.all(Array.from(Array(chainCount).keys()).map((i) => contract.getChain(i)));
-
-  //Splits concatenated cert string to array of certs
-  return chains.map((chain) => chainToCerts(chain));
-}
-
-/**
- * Gets signature from contract
- * @param {Contract} contract - Ethers TLSDID contract object
- *
- * @returns {Promise<string>} - Signature
- */
-export async function getSignature(contract): Promise<string> {
-  return await contract.signature();
+async function queryBlock(registry, filters: EventFilter[], block: number): Promise<Event[]> {
+  let events = (await Promise.all(filters.map((filter) => registry.queryFilter(filter, block, block)))).flat();
+  return events;
 }

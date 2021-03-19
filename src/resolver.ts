@@ -1,9 +1,36 @@
 import { rootCertificates as nodeRootCertificates } from 'tls';
-import { Contract } from 'ethers';
-import { Attribute, ProviderConfig } from './types';
-import { hashContract, verify, addValueAtPath, configureProvider, verifyChains, createCaStore } from './utils';
+import { Contract, Event } from 'ethers';
+import {
+  Attribute,
+  ProviderConfig,
+  configureProvider,
+  hashContract,
+  verify,
+  REGISTRY,
+} from '@digitalcredentials/tls-did-utils';
+import { addValueAtPath, chainToCerts, createCaStore, verifyChain } from './utils';
 import { DIDDocument, DIDResolver, ParsedDID, parse } from 'did-resolver';
-import { getContracts, getAttributes, getChains, getDomain, getExpiry, getSignature, REGISTRY } from './chain';
+import { getClaimants, newRegistry, resolveClaimant } from './chain';
+import { pki } from 'node-forge';
+
+/**
+ * Gets TLS DID Resolver
+ *
+ * @param {ProviderConfig} config - Ethereum provider
+ * @param {string} registryAddress - Address of TLS DID Contract Registry
+ *
+ * @returns {Resolver}
+ */
+export function getResolver(
+  config?: ProviderConfig,
+  registryAddress?: string,
+  rootCertificates?: string[]
+): { [index: string]: DIDResolver } {
+  async function resolve(did: string, parsed: ParsedDID): Promise<DIDDocument> {
+    return await resolveTlsDid(did, parsed ? parsed : parse(did), config, registryAddress, rootCertificates);
+  }
+  return { tls: resolve };
+}
 
 /**
  * Resolves TLS DID
@@ -12,85 +39,118 @@ import { getContracts, getAttributes, getChains, getDomain, getExpiry, getSignat
  * @param {providers.JsonRpcProvider} provider - Ethereum provider
  * @param {string} registryAddress - Address of TLS DID Contract Registry
  *
- * @returns {Promise<Contract>}
+ * @returns {Promise<DIDDocumentObject>}
  */
-async function processContracts(
+async function resolveTlsDid(
+  did: string,
+  parsed: ParsedDID,
+  config: ProviderConfig = {},
+  registryAddress: string = REGISTRY,
+  rootCertificates: readonly string[] = nodeRootCertificates
+): Promise<DIDDocument> {
+  const domain = parsed.id;
+  const provider = configureProvider(config);
+  const registry = await newRegistry(provider, registryAddress);
+  const claimants = await getClaimants(registry, domain);
+  const attributes = await resolveClaims(rootCertificates, registry, domain, claimants);
+
+  return buildDIDDocument(did, attributes);
+}
+
+async function resolveClaims(
+  rootCertificates: readonly string[],
+  registry: Contract,
   domain: string,
-  contracts: Contract[],
-  rootCertificates: readonly string[]
+  claimants: string[]
 ): Promise<Attribute[]> {
   //Create node-forge CA certificate store
   const caStore = createCaStore(rootCertificates);
-
-  //Iterate over all contracts and verify if contract is valid
-  //If multiple contracts are valid an error is thrown
-  let validContract: Contract;
-  let validChain: string[];
-  let validAttributes: Attribute[];
-  for (let contract of contracts) {
-    //Retrieve tls x509 certs
-    const chains = await getChains(contract);
-    if (chains.length === 0) {
-      //No chain
-      continue;
-    }
-    //Verify chains against CA certificate store and domain
-    const validChains = await verifyChains(chains, domain, caStore);
-    if (validChains.length === 0) {
-      //No valid chain
-      continue;
-    }
-    //If multiple chains are present the newest is used
-
-    //Check for equal domain in DID and contract
-    const contractDomain = await getDomain(contract);
-    if (domain !== contractDomain) {
-      //DID domain and contract domain to not match
+  let validAttributes: Attribute[] = [];
+  let docValid = false;
+  for (let claimant of claimants) {
+    const events = await resolveClaimant(registry, domain, claimant);
+    if (events.length === 0) {
+      //No change events found for claimant
       continue;
     }
 
-    //Retrieve expiry from contract and check if expired
-    const expiry = await getExpiry(contract);
-    const now = new Date();
-    if (expiry && expiry < now) {
-      //Contract expired
+    let { docObject, valid } = processEvents(events, domain, caStore);
+    if (!docObject.chain) {
+      //No chain change events found for claimant
       continue;
     }
 
-    //Retrieve all attributes from the contract
-    const attributes = await getAttributes(contract);
+    if (valid) {
+      //Hash contract values
+      const hash = hashContract(domain, docObject.attributes, docObject.expiry, docObject.chain);
 
-    //Retrieve signature from the contract
-    const signature = await getSignature(contract);
-
-    //Hash contract values
-    const hash = hashContract(domain, contract.address, attributes, expiry, chains);
-
-    //Check for correct signature
-    //Uses newest cert
-    const valid = verify(chains[0][0], signature, hash);
-    if (!valid) {
-      //Signatures does not match data
-      continue;
+      //Check for correct signature
+      valid = verify(docObject.chain[0], docObject.signature, hash);
+      if (!valid) {
+        //Signatures does not match data
+        continue;
+      }
     }
+    if (valid && docValid) {
+      throw new Error(`did:tls:${domain} could not be unambiguously resolved`);
+    }
+    if (valid) {
+      docValid = true;
+      validAttributes = docObject.attributes;
+    }
+  }
+  if (!docValid) {
+    throw new Error(`did:tls:${domain} could not be validly resolved`);
+  }
 
-    if (valid && !validContract) {
-      validContract = contract;
-      validChain = validChains[0];
-      validAttributes = attributes;
-    } else if (valid) {
-      throw new Error(`${contracts.length} contracts were found. Multiple were valid.`);
+  return validAttributes;
+}
+
+function processEvents(
+  events: Event[],
+  domain: string,
+  caStore: pki.CAStore
+): { docObject: { attributes: Attribute[]; signature: string; expiry: Date; chain: string[] }; valid: boolean } {
+  let attributes = [];
+  let signature;
+  let expiry;
+  let chain;
+  let invalid = false;
+
+  for (let event of events) {
+    switch (true) {
+      case event.event == 'AttributeChanged':
+        const path = event.args.path;
+        const value = event.args.value;
+        attributes.push({ path, value });
+        break;
+
+      case event.event == 'ExpiryChanged' && expiry == null:
+        const expiryMS = event.args.expiry.toNumber();
+        expiry = new Date(expiryMS);
+        const now = new Date();
+        if (expiry && expiry < now) {
+          invalid = true;
+          continue;
+        }
+        break;
+
+      case event.event == 'SignatureChanged' && signature == null:
+        signature = event.args.signature;
+        break;
+
+      case event.event == 'ChainChanged' && chain == null:
+        chain = chainToCerts(event.args.chain);
+        const chainValid = verifyChain(chain, domain, caStore);
+        if (!chainValid) {
+          invalid = true;
+          continue;
+        }
+        break;
     }
   }
 
-  //If single valid contract was found it is returned with its corresponding
-  //tls certification in jwk format
-  //If no valid contract was found an error is thrown
-  if (validContract) {
-    return validAttributes;
-  } else {
-    throw new Error(`${contracts.length} contracts were found. None was valid.`);
-  }
+  return { docObject: { attributes, signature, expiry, chain }, valid: !invalid };
 }
 
 /**
@@ -113,51 +173,4 @@ function buildDIDDocument(did: string, attributes: Attribute[]): DIDDocument {
   attributes.forEach((attribute) => addValueAtPath(didDocument, attribute.path, attribute.value));
 
   return didDocument;
-}
-
-/**
- * Resolves TLS DID
- *
- * @param {string} did - TLS DID
- * @param {providers.JsonRpcProvider} provider - Ethereum provider
- * @param {string} registryAddress - Address of TLS DID Contract Registry
- *
- * @returns {Promise<DIDDocumentObject>}
- */
-async function resolveTlsDid(
-  did: string,
-  parsed: ParsedDID,
-  config: ProviderConfig = {},
-  registryAddress: string = REGISTRY,
-  rootCertificates: readonly string[] = nodeRootCertificates
-): Promise<DIDDocument> {
-  const provider = configureProvider(config);
-  const domain = parsed.id;
-  const contracts = await getContracts(domain, provider, registryAddress);
-  if (contracts.length === 0) {
-    throw new Error('No contract was found');
-  }
-
-  const attributes = await processContracts(domain, contracts, rootCertificates);
-
-  return buildDIDDocument(did, attributes);
-}
-
-/**
- * Gets TLS DID Resolver
- *
- * @param {ProviderConfig} config - Ethereum provider
- * @param {string} registryAddress - Address of TLS DID Contract Registry
- *
- * @returns {Resolver}
- */
-export function getResolver(
-  config?: ProviderConfig,
-  registryAddress?: string,
-  rootCertificates?: string[]
-): { [index: string]: DIDResolver } {
-  async function resolve(did: string, parsed: ParsedDID): Promise<DIDDocument> {
-    return await resolveTlsDid(did, parsed ? parsed : parse(did), config, registryAddress, rootCertificates);
-  }
-  return { tls: resolve };
 }
