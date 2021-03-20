@@ -1,5 +1,5 @@
 import { readFileSync } from 'fs';
-import tls from '../index';
+import { getResolver } from '../index';
 import { TLSDID } from '@digitalcredentials/tls-did';
 import { Resolver, DIDResolver } from 'did-resolver';
 import c from './testConfig.json';
@@ -19,7 +19,7 @@ const domain = `tls-did.de`;
 describe('Resolver: Valid contracts', () => {
   beforeAll(async () => {
     //Instantiate resolver
-    tlsResolver = tls.getResolver({ rpcUrl: c.jsonRpcUrl }, c.registryAddress, [rootCert]);
+    tlsResolver = getResolver({ rpcUrl: c.jsonRpcUrl }, c.registryAddress, [rootCert]);
 
     //Instantiate tlsDid
     tlsDid = new TLSDID(domain, c.etherPrivKey, {
