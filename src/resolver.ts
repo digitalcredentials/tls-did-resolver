@@ -1,4 +1,5 @@
 import { rootCertificates as nodeRootCertificates } from 'tls';
+import { pki } from 'node-forge';
 import { Contract, Event } from 'ethers';
 import {
   Attribute,
@@ -11,7 +12,7 @@ import {
 import { addValueAtPath, chainToCerts, createCaStore, verifyChain } from './utils';
 import { DIDDocument, DIDResolver, ParsedDID, parse } from 'did-resolver';
 import { getClaimants, newRegistry, resolveClaimant } from './chain';
-import { pki } from 'node-forge';
+import { TLSDIDResolverError } from './error';
 
 /**
  * Gets TLS DID Resolver
@@ -56,13 +57,18 @@ async function resolveTlsDid(
     throw new Error(`TLS-DID could not be validly resolved. No domain provided`);
   }
 
+  //Configure ethereum provider and TLS-DID registry contract object
   const provider = configureProvider(config);
   const registry = await newRegistry(provider, registryAddress);
+
+  //Read set of claimants for TLS-DID identifier (domain) from chain
   const claimants = await getClaimants(registry, domain);
   if (claimants.length === 0) {
     throw new Error(`did:tls:${domain} could not be validly resolved. No claimants could be found`);
   }
 
+  //Resolve all claimants for TLS-DID identifier (domain)
+  //If exactly one valid claim is found a set of attributes for the TLS-DID Document is returned
   const attributes = await resolveClaimants(rootCertificates, registry, domain, claimants);
 
   return buildDIDDocument(did, attributes);
@@ -122,7 +128,7 @@ async function resolveClaimants(
     validAttributes = attributes;
   }
   if (!docValid) {
-    throw new Error(`did:tls:${domain} could not be validly resolved. ${errors}`);
+    throw new TLSDIDResolverError(`did:tls:${domain} could not be validly resolved`, errors);
   }
 
   return validAttributes;
