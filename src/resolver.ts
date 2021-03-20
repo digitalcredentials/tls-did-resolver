@@ -182,7 +182,12 @@ function processEvents(events: Event[], domain: string, caStore: pki.CAStore): A
 
   if (!chain) {
     //No chain change events found for claimant
-    throw new Error('No TLS certificate chain');
+    throw new Error('Missing TLS certificate chain');
+  }
+
+  if (!signature) {
+    //No chain change events found for claimant
+    throw new Error('Missing signature');
   }
 
   //Hash contract values
