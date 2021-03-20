@@ -35,8 +35,12 @@ export function addValueAtPath(object: object, path: string, value: any) {
       }
       currentObj = currentObj[key][idx];
     } else {
-      currentObj[key] = {};
-      currentObj = currentObj[key];
+      if (currentObj[key]) {
+        currentObj = currentObj[key];
+      } else {
+        currentObj[key] = {};
+        currentObj = currentObj[key];
+      }
     }
   });
 }

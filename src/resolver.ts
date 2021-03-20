@@ -154,7 +154,7 @@ function processEvents(events: Event[], domain: string, caStore: pki.CAStore): A
       case event.event == 'AttributeChanged':
         const path = event.args.path;
         const value = event.args.value;
-        attributes.push({ path, value });
+        attributes.unshift({ path, value });
         break;
 
       case event.event == 'ExpiryChanged' && expiry == null:

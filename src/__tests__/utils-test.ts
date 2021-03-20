@@ -40,6 +40,14 @@ describe('Utils', () => {
     expect(object).toEqual({ parent: [{ child: 'value' }] });
   });
 
+  it('should add value to object in path with existing object with child', async () => {
+    let object = { parent: { childA: 'valueA' } };
+    const path = 'parent/childB';
+    const value = 'valueB';
+    addValueAtPath(object, path, value);
+    expect(object).toEqual({ parent: { childA: 'valueA', childB: 'valueB' } });
+  });
+
   it('should add value to object in path with existing array', async () => {
     let object = { parent: [{ childA: 'valueA' }] };
     const path = 'parent[1]/childB';

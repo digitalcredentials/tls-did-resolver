@@ -6,7 +6,6 @@ import c from './testConfig.json';
 
 let tlsResolver: { [index: string]: DIDResolver };
 let tlsDid: TLSDID;
-let tlsDids: TLSDID[] = [];
 
 //Load certs and key
 const cert = readFileSync(__dirname + c.certPath, 'utf8');
@@ -34,6 +33,8 @@ describe('Resolver: Valid contracts', () => {
     const chain = [cert, intermediateCert];
     await tlsDid.addChain(chain);
     await tlsDid.setExpiry(new Date('2100/12/12'));
+    await tlsDid.addAttribute('parent/child1', 'value1');
+    await tlsDid.addAttribute('parent/child2', 'value2');
     await tlsDid.sign(pemKey);
   });
 
@@ -43,6 +44,7 @@ describe('Resolver: Valid contracts', () => {
     expect(didDocument).toEqual({
       '@context': 'https://www.w3.org/ns/did/v1',
       id: 'did:tls:tls-did.de',
+      parent: { child1: 'value1', child2: 'value2' },
       publicKey: [],
     });
   });
@@ -54,6 +56,7 @@ describe('Resolver: Valid contracts', () => {
     expect(didDocument).toEqual({
       '@context': 'https://www.w3.org/ns/did/v1',
       id: 'did:tls:tls-did.de',
+      parent: { child1: 'value1', child2: 'value2' },
       publicKey: [],
     });
   });
