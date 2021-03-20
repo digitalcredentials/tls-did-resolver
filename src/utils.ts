@@ -1,8 +1,5 @@
 import { pki, asn1 } from 'node-forge';
-import crypto from 'crypto';
-import { providers } from 'ethers';
 import ocsp from 'ocsp';
-import { ProviderConfig } from './types';
 
 /**
  * Adds a value at a path to an object
@@ -95,12 +92,6 @@ export async function verifyChains(chains: string[][], domain: string, caStore: 
   }
   return verifiedChains;
 }
-
-/**
- * @typedef {Object} Chain
- * @property {chain} string - The chain
- * @property {boolean} valid - The chain's validity
- */
 
 /**
  * Verifies pem cert chains against node's rootCertificates and domain

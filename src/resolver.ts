@@ -17,7 +17,8 @@ import { pki } from 'node-forge';
  * Gets TLS DID Resolver
  *
  * @param {ProviderConfig} config - Ethereum provider
- * @param {string} registryAddress - Address of TLS DID Contract Registry
+ * @param {string} registryAddress - Address of TLS-DID Registry
+ * @param {string[]} rootCertificates - Trusted TLS root certificates
  *
  * @returns {Resolver}
  */
@@ -36,8 +37,10 @@ export function getResolver(
  * Resolves TLS DID
  *
  * @param {string} did - TLS DID
- * @param {providers.JsonRpcProvider} provider - Ethereum provider
- * @param {string} registryAddress - Address of TLS DID Contract Registry
+ * @param {ParsedDID} parsed - Parsed DID
+ * @param {ProviderConfig} config - Configuration for ethereum provider
+ * @param {string} registryAddress - Address of TLS-DID Registry
+ * @param {string[]} rootCertificates - Trusted TLS root certificates
  *
  * @returns {Promise<DIDDocumentObject>}
  */
@@ -49,15 +52,33 @@ async function resolveTlsDid(
   rootCertificates: readonly string[] = nodeRootCertificates
 ): Promise<DIDDocument> {
   const domain = parsed.id;
+  if (domain?.length === 0) {
+    throw new Error(`TLS-DID could not be validly resolved. No domain provided`);
+  }
+
   const provider = configureProvider(config);
   const registry = await newRegistry(provider, registryAddress);
   const claimants = await getClaimants(registry, domain);
-  const attributes = await resolveClaims(rootCertificates, registry, domain, claimants);
+  if (claimants.length === 0) {
+    throw new Error(`did:tls:${domain} could not be validly resolved. No claimants could be found`);
+  }
+
+  const attributes = await resolveClaimants(rootCertificates, registry, domain, claimants);
 
   return buildDIDDocument(did, attributes);
 }
 
-async function resolveClaims(
+/**
+ * Resolves all claimants
+ *
+ * @param {string[]} rootCertificates - Trusted TLS root certificates
+ * @param {Contract} registry - TLS-DID registry contract object
+ * @param {string} domain - TLS-DID identifier (domain)
+ * @param {string[]} claimants - Set of ethereum addresses claiming control over TLS-DID
+ *
+ * @returns {Promise<DIDDocumentObject>}
+ */
+async function resolveClaimants(
   rootCertificates: readonly string[],
   registry: Contract,
   domain: string,
@@ -65,57 +86,62 @@ async function resolveClaims(
 ): Promise<Attribute[]> {
   //Create node-forge CA certificate store
   const caStore = createCaStore(rootCertificates);
+
   let validAttributes: Attribute[] = [];
   let docValid = false;
-  for (let claimant of claimants) {
-    const events = await resolveClaimant(registry, domain, claimant);
+  let errors: { claimant: string; error: Error }[] = [];
+  for (const [i, claimant] of claimants.entries()) {
+    let events;
+    try {
+      events = await resolveClaimant(registry, domain, claimant);
+    } catch (error) {
+      errors[i] = { claimant, error };
+      continue;
+    }
+
     if (events.length === 0) {
       //No change events found for claimant
+      errors[i] = { claimant, error: new Error('No events') };
       continue;
     }
 
-    let { docObject, valid } = processEvents(events, domain, caStore);
-    if (!docObject.chain) {
-      //No chain change events found for claimant
+    let attributes;
+    try {
+      attributes = processEvents(events, domain, caStore);
+    } catch (error) {
+      errors[i] = { claimant, error };
       continue;
     }
 
-    if (valid) {
-      //Hash contract values
-      const hash = hashContract(domain, docObject.attributes, docObject.expiry, docObject.chain);
-
-      //Check for correct signature
-      valid = verify(docObject.chain[0], docObject.signature, hash);
-      if (!valid) {
-        //Signatures does not match data
-        continue;
-      }
+    if (docValid) {
+      throw new Error(
+        `did:tls:${domain} could not be unambiguously resolved. ${claimants.length} claimants exist, at least two have a valid claim.`
+      );
     }
-    if (valid && docValid) {
-      throw new Error(`did:tls:${domain} could not be unambiguously resolved`);
-    }
-    if (valid) {
-      docValid = true;
-      validAttributes = docObject.attributes;
-    }
+    docValid = true;
+    validAttributes = attributes;
   }
   if (!docValid) {
-    throw new Error(`did:tls:${domain} could not be validly resolved`);
+    throw new Error(`did:tls:${domain} could not be validly resolved. ${errors}`);
   }
 
   return validAttributes;
 }
 
-function processEvents(
-  events: Event[],
-  domain: string,
-  caStore: pki.CAStore
-): { docObject: { attributes: Attribute[]; signature: string; expiry: Date; chain: string[] }; valid: boolean } {
-  let attributes = [];
-  let signature;
-  let expiry;
-  let chain;
-  let invalid = false;
+/**
+ * Iterates thru events to validate TLS-DID
+ *
+ * @param {Event[]} events - Set of events
+ * @param {string} domain - TLS-DID identifier (domain)
+ * @param {pki.CAStore} caStore - node-forge CA certificate store
+ *
+ * @returns {Attribute[]} - Set off TLS-DID attributes
+ */
+function processEvents(events: Event[], domain: string, caStore: pki.CAStore): Attribute[] {
+  let attributes: Attribute[] = [];
+  let signature: string;
+  let expiry: Date;
+  let chain: string[];
 
   for (let event of events) {
     switch (true) {
@@ -130,8 +156,7 @@ function processEvents(
         expiry = new Date(expiryMS);
         const now = new Date();
         if (expiry && expiry < now) {
-          invalid = true;
-          continue;
+          throw new Error('TLS-DID expired');
         }
         break;
 
@@ -143,14 +168,26 @@ function processEvents(
         chain = chainToCerts(event.args.chain);
         const chainValid = verifyChain(chain, domain, caStore);
         if (!chainValid) {
-          invalid = true;
-          continue;
+          throw new Error('TLS certificate chain invalid');
         }
         break;
     }
   }
 
-  return { docObject: { attributes, signature, expiry, chain }, valid: !invalid };
+  if (!chain) {
+    //No chain change events found for claimant
+    throw new Error('No TLS certificate chain');
+  }
+
+  //Hash contract values
+  const hash = hashContract(domain, attributes, expiry, chain);
+
+  //Check for correct signature
+  let signatureValid = verify(chain[0], signature, hash);
+  if (!signatureValid) {
+    throw new Error('Signature invalid');
+  }
+  return attributes;
 }
 
 /**

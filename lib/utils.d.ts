@@ -28,11 +28,6 @@ export declare function createCaStore(rootCertificates: readonly string[]): pki.
  */
 export declare function verifyChains(chains: string[][], domain: string, caStore: pki.CAStore): Promise<string[][]>;
 /**
- * @typedef {Object} Chain
- * @property {chain} string - The chain
- * @property {boolean} valid - The chain's validity
- */
-/**
  * Verifies pem cert chains against node's rootCertificates and domain
  * @param {string[]} chain - Array of of aggregated pem certs strings
  * @param {string} domain - Domain the leaf certificate should have as subject
