@@ -20,7 +20,7 @@
   },
   "homepage": "https://github.com/tls-did-project/tls-did-resolver#readme",
   "devDependencies": {
-    "@digitalcredentials/tls-did": "github:tls-did-project/tls-did#feature/eventDirven",
+    "@digitalcredentials/tls-did": "github:tls-did-project/tls-did#feature/eventDriven",
     "@types/jest": "^26.0.14",
     "@types/node-forge": "^0.9.5",
     "jest": "^26.6.0",
