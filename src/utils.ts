@@ -1,44 +1,5 @@
 import { pki, asn1 } from 'node-forge';
-import crypto from 'crypto';
-import { providers } from 'ethers';
-import hash from 'object-hash';
 import ocsp from 'ocsp';
-import { Attribute, ProviderConfig } from './types';
-
-/**
- * Verifies if signature is correct
- *
- * @param {string} pemCert - public pem certificate
- * @param {string} signature - signature of data signed with private pem certificate
- * @param {string} data - data that has been signed
- */
-export function verify(pemCert: string, signature: string, data: string): boolean {
-  const signatureBuffer = Buffer.from(signature, 'base64');
-  const verifier = crypto.createVerify('sha256');
-  verifier.update(data);
-  verifier.end();
-  const valid = verifier.verify(pemCert, signatureBuffer);
-  return valid;
-}
-
-/**
- * Hashes a TLS DID Contract
- *
- * @param {string} domain - TLS DID domain
- * @param {string} address - TLS DID Contract address
- * @param {Attribute[]} attributes - Additional TLS DID Documents attributes
- * @param {Date} expiry - TLS DID Contract expiry
- * @param {string[][]} chains - TLS DID Contract certificate chains
- */
-export function hashContract(
-  domain: string,
-  address: string,
-  attributes: Attribute[] = [],
-  expiry: Date = null,
-  chains: string[][] = []
-): string {
-  return hash({ domain, address, attributes, expiry, chains });
-}
 
 /**
  * Adds a value at a path to an object
@@ -74,26 +35,14 @@ export function addValueAtPath(object: object, path: string, value: any) {
       }
       currentObj = currentObj[key][idx];
     } else {
-      currentObj[key] = {};
-      currentObj = currentObj[key];
+      if (currentObj[key]) {
+        currentObj = currentObj[key];
+      } else {
+        currentObj[key] = {};
+        currentObj = currentObj[key];
+      }
     }
   });
-}
-
-/**
- * Returns the configured provider
- * @param {ProviderConfig} conf - Configuration for provider
- */
-export function configureProvider(conf: ProviderConfig = {}): providers.Provider {
-  if (conf?.provider) {
-    return conf.provider;
-  } else if (conf?.rpcUrl) {
-    return new providers.JsonRpcProvider(conf.rpcUrl);
-  } else if (conf?.web3) {
-    return new providers.Web3Provider(conf.web3.currentProvider);
-  } else {
-    return new providers.JsonRpcProvider('http://localhost:8545');
-  }
 }
 
 /**
@@ -149,19 +98,13 @@ export async function verifyChains(chains: string[][], domain: string, caStore: 
 }
 
 /**
- * @typedef {Object} Chain
- * @property {chain} string - The chain
- * @property {boolean} valid - The chain's validity
- */
-
-/**
  * Verifies pem cert chains against node's rootCertificates and domain
  * @param {string[]} chain - Array of of aggregated pem certs strings
  * @param {string} domain - Domain the leaf certificate should have as subject
  * @param {pki.CAStore} caStore - Nodes root certificates in a node-forge compliant format
  * @return {Chain}[] - Array of objects containing chain and validity
  */
-async function verifyChain(chain: string[], domain: string, caStore: pki.CAStore): Promise<{ valid: boolean }> {
+export async function verifyChain(chain: string[], domain: string, caStore: pki.CAStore): Promise<{ valid: boolean }> {
   const certificateArray = chain.map((pem) => pki.certificateFromPem(pem));
   let valid = pki.verifyCertificateChain(caStore, certificateArray) && verifyCertSubject(chain[0], domain);
   const ocspUri = checkForOCSPUri(certificateArray[0]);

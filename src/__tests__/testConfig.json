@@ -1,7 +1,7 @@
 {
-  "registryAddress": "0xA725A297b0F81c502df772DBE2D0AEb68788679d",
+  "registryAddress": "0x01Defd9799cCDe9efCDE2d3A2aE6E6d4400a92fE",
   "jsonRpcUrl": "http://localhost:8545",
-  "etherPrivKey": "0x2afa99eb4bb26f02f1d2f40808e5cc629c78dcd8a9f54ff5a7fb2e5dae6e702b",
+  "etherPrivKey": "0x96eb3ae3f929d808d61b8b19ac3d4456834d19a07d3d09c0e7b31eca828af6a9",
   "privKeyPath": "/ssl/private/privKey.pem",
   "certPath": "/ssl/certs/cert.pem",
   "intermediateCertPath": "/ssl/certs/intermediateCert.pem",

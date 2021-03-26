@@ -1,48 +1,29 @@
-import { Contract, providers } from 'ethers';
-import { Attribute } from './types';
-export declare const REGISTRY = "0xA725A297b0F81c502df772DBE2D0AEb68788679d";
+import { Contract, providers, Event } from 'ethers';
 /**
- * Gets all TLSDIDContracts associated with a TLS-DID as ethers contract objects
+ * Creates TLS-DID registry contract object
  *
- * @param {string} did - TLS DID
- * @param {providers.JsonRpcProvider} provider - Ethereum provider
- * @param {string} registryAddress - Address of TLS DID Contract Registry
+ * @param {providers.Provider} provider - Ethereum provider
+ * @param {string} registryAddress - Ethereum address of TLS-DID registry contract
  *
  * @returns {Promise<Contract>}
  */
-export declare function getContracts(domain: string, provider: providers.Provider, registryAddress: string): Promise<Contract[]>;
+export declare function newRegistry(provider: providers.Provider, registryAddress: string): Promise<Contract>;
 /**
- * Gets domain from contract
- * @param {Contract} contract - Ethers TLSDID contract object
+ * Reads claimants from TLS-DID registry contract
  *
- * @returns {Promise<String>} - Domain
+ * @param {Contract} registry - Creates TLS-DID registry contract object
+ * @param {string} domain - TLS-DID identifier (domain)
+ *
+ * @returns {Promise<string[]>}
  */
-export declare function getDomain(contract: any): Promise<String>;
+export declare function getClaimants(registry: Contract, domain: string): Promise<string[]>;
 /**
- * Gets expiry from contract
- * @param {Contract} contract - Ethers TLSDID contract object
+ * Queries events from ethereum chain for a claimant
  *
- * @returns {Promise<Date>} - Expiry
- */
-export declare function getExpiry(contract: any): Promise<Date>;
-/**
- * Gets attributes from contract
- * @param {Contract} contract - Ethers TLSDID contract object
+ * @param {Contract} registry - TLS-DID registry contract object
+ * @param {string} domain - TLS-DID identifier (domain)
+ * @param {string} address - Ethereum address of claimant
  *
- * @returns {Promise<Attribute[]>} - Attribute Array
+ * @returns {Promise<Event[]>}
  */
-export declare function getAttributes(contract: any): Promise<Attribute[]>;
-/**
- * Gets chains from contract
- * @param {Contract} contract - Ethers TLSDID contract object
- *
- * @returns {Promise<string[][]>} - Array of chain arrays
- */
-export declare function getChains(contract: any): Promise<string[][]>;
-/**
- * Gets signature from contract
- * @param {Contract} contract - Ethers TLSDID contract object
- *
- * @returns {Promise<string>} - Signature
- */
-export declare function getSignature(contract: any): Promise<string>;
+export declare function resolveClaimant(registry: Contract, domain: string, address: string): Promise<Event[]>;
