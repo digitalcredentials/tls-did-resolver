@@ -30,7 +30,7 @@
   },
   "dependencies": {
     "@digitalcredentials/tls-did-registry": "^0.2.0",
-    "@digitalcredentials/tls-did-utils": "^0.0.1",
+    "@digitalcredentials/tls-did-utils": "^0.1.0",
     "did-resolver": "^2.1.2",
     "ethers": "^5.0.17",
     "node-forge": "^0.10.0",
