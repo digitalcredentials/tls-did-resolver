@@ -1,6 +1,7 @@
 import { Contract, providers, EventFilter, Event } from 'ethers';
 import { hexZeroPad } from 'ethers/lib/utils';
 import TLSDIDRegistryContract from '@digitalcredentials/tls-did-registry/build/contracts/TLSDIDRegistry.json';
+import { sortEvents } from '@digitalcredentials/tls-did-utils';
 
 /**
  * Creates TLS-DID registry contract object
@@ -83,7 +84,10 @@ async function queryChain(registry, filters: EventFilter[], block: number): Prom
     throw new Error(`No event found in block: ${block}`);
   }
 
-  // TODO is the event array sorted by creation time
+  //Sort events by descending blocknumber
+  events = sortEvents(events);
+
+  //Recursion if previous change block is not 0
   const previousChangeBlockBN = events[events.length - 1].args.previousChange;
   const previousChangeBlock = previousChangeBlockBN.toNumber();
   if (previousChangeBlock > 0) {

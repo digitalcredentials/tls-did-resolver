@@ -61,6 +61,50 @@ describe('Resolver: Valid contracts', () => {
     });
   });
 
+  it('should resolve did after update', async () => {
+    const domain = tlsDid.domain;
+
+    //Connect to exiting claim and update information
+    const tlsDidDuplicate = new TLSDID(domain, c.etherPrivKey, {
+      registry: c.registryAddress,
+      providerConfig: {
+        rpcUrl: c.jsonRpcUrl,
+      },
+    });
+    await tlsDidDuplicate.loadDataFromRegistry();
+
+    await tlsDid.addChain([cert, intermediateCert]);
+
+    await tlsDid.addAttribute('parent/child', 'value', 50000);
+    await tlsDid.addAttribute('arrayA[0]/element', 'value', 50000);
+    await tlsDid.addAttribute('arrayB[0]', 'value', 50000);
+    await tlsDid.addAttribute('assertionMethod[0]/id', `did:tls:${domain}#keys-2`, 50000);
+    await tlsDid.addAttribute('assertionMethod[0]/type', 'Ed25519VerificationKey2018', 50000);
+    await tlsDid.addAttribute('assertionMethod[0]/controller', `did:tls:${domain}`, 50000);
+    await tlsDid.addAttribute('assertionMethod[0]/publicKeyBase58', 'H3C2AVvLMv6gmMNam3uVAjZpfkcJCwDwnZn6z3wXmqPV', 50000);
+    await tlsDid.setExpiry(new Date('2040/12/12'), 50000);
+    await tlsDid.sign(pemKey, 50000);
+
+    //Resolve DID
+    const didDocument = await tlsResolver.tls(`did:tls:${domain}`, null, null);
+    expect(didDocument).toEqual({
+      '@context': 'https://www.w3.org/ns/did/v1',
+      arrayA: [{ element: 'value' }],
+      arrayB: ['value'],
+      assertionMethod: [
+        {
+          controller: 'did:tls:tls-did.de',
+          id: 'did:tls:tls-did.de#keys-2',
+          publicKeyBase58: 'H3C2AVvLMv6gmMNam3uVAjZpfkcJCwDwnZn6z3wXmqPV',
+          type: 'Ed25519VerificationKey2018',
+        },
+      ],
+      id: 'did:tls:tls-did.de',
+      parent: { child: 'value', child1: 'value1', child2: 'value2' },
+      publicKey: [],
+    });
+  });
+
   it('should not resolve did after deletion', async () => {
     const domain = tlsDid.domain;
 
