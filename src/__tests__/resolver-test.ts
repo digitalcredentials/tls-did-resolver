@@ -61,9 +61,31 @@ describe('Resolver: Valid contracts', () => {
     });
   });
 
-  it('should resolve did after update', async () => {
-    const domain = tlsDid.domain;
+  it('should resolve did after attribute update', async () => {
+    //Connect to exiting claim and update information
+    const tlsDidDuplicate = new TLSDID(domain, c.etherPrivKey, {
+      registry: c.registryAddress,
+      providerConfig: {
+        rpcUrl: c.jsonRpcUrl,
+      },
+    });
 
+    await tlsDidDuplicate.loadDataFromRegistry();
+    await tlsDidDuplicate.addAttribute('parent/child3', 'value3');
+    await tlsDidDuplicate.sign(pemKey);
+
+    const resolver = new Resolver({ ...tlsResolver });
+    const didDocument = await resolver.resolve(`did:tls:${tlsDid.domain}`);
+
+    expect(didDocument).toEqual({
+      '@context': 'https://www.w3.org/ns/did/v1',
+      id: 'did:tls:tls-did.de',
+      parent: { child1: 'value1', child2: 'value2', child3: 'value3' },
+      publicKey: [],
+    });
+  });
+
+  it('should resolve did after large update', async () => {
     //Connect to exiting claim and update information
     const tlsDidDuplicate = new TLSDID(domain, c.etherPrivKey, {
       registry: c.registryAddress,
@@ -73,20 +95,24 @@ describe('Resolver: Valid contracts', () => {
     });
     await tlsDidDuplicate.loadDataFromRegistry();
 
-    await tlsDid.addChain([cert, intermediateCert]);
+    await tlsDidDuplicate.addChain([cert, intermediateCert]);
 
-    await tlsDid.addAttribute('parent/child', 'value', 50000);
-    await tlsDid.addAttribute('arrayA[0]/element', 'value', 50000);
-    await tlsDid.addAttribute('arrayB[0]', 'value', 50000);
-    await tlsDid.addAttribute('assertionMethod[0]/id', `did:tls:${domain}#keys-2`, 50000);
-    await tlsDid.addAttribute('assertionMethod[0]/type', 'Ed25519VerificationKey2018', 50000);
-    await tlsDid.addAttribute('assertionMethod[0]/controller', `did:tls:${domain}`, 50000);
-    await tlsDid.addAttribute('assertionMethod[0]/publicKeyBase58', 'H3C2AVvLMv6gmMNam3uVAjZpfkcJCwDwnZn6z3wXmqPV', 50000);
-    await tlsDid.setExpiry(new Date('2040/12/12'), 50000);
-    await tlsDid.sign(pemKey, 50000);
+    await tlsDidDuplicate.addAttribute('parent/child', 'value', 50000);
+    await tlsDidDuplicate.addAttribute('arrayA[0]/element', 'value', 50000);
+    await tlsDidDuplicate.addAttribute('arrayB[0]', 'value', 50000);
+    await tlsDidDuplicate.addAttribute('assertionMethod[0]/id', `did:tls:${domain}#keys-2`, 50000);
+    await tlsDidDuplicate.addAttribute('assertionMethod[0]/type', 'Ed25519VerificationKey2018', 50000);
+    await tlsDidDuplicate.addAttribute('assertionMethod[0]/controller', `did:tls:${domain}`, 50000);
+    await tlsDidDuplicate.addAttribute(
+      'assertionMethod[0]/publicKeyBase58',
+      'H3C2AVvLMv6gmMNam3uVAjZpfkcJCwDwnZn6z3wXmqPV',
+      50000
+    );
+    await tlsDidDuplicate.setExpiry(new Date('2040/12/12'), 50000);
+    await tlsDidDuplicate.sign(pemKey, 50000);
 
     //Resolve DID
-    const didDocument = await tlsResolver.tls(`did:tls:${domain}`, null, null);
+    const didDocument = await tlsResolver.tls(`did:tls:${tlsDidDuplicate.domain}`, null, null);
     expect(didDocument).toEqual({
       '@context': 'https://www.w3.org/ns/did/v1',
       arrayA: [{ element: 'value' }],
@@ -100,7 +126,7 @@ describe('Resolver: Valid contracts', () => {
         },
       ],
       id: 'did:tls:tls-did.de',
-      parent: { child: 'value', child1: 'value1', child2: 'value2' },
+      parent: { child: 'value', child1: 'value1', child2: 'value2', child3: 'value3' },
       publicKey: [],
     });
   });
